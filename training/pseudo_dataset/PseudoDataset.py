@@ -65,6 +65,8 @@ class PseudoDataset(Dataset):
         self.images_path.extend(pse_images_path)
         self.masks_path.extend(masks_path)
         self.masks_path.extend(pse_masks_path)
+        # filter delete_.tif
+        self.masks_path = self._filter_delete(self.masks_path)
 
         self.transform = transforms.__dict__[transform_name] if transform_name else None
         self.tfms = pytorchtrans.Compose([pytorchtrans.ToTensor()])
@@ -72,8 +74,11 @@ class PseudoDataset(Dataset):
         self.label_mapping = {
             0: 0,
             80: 1,
-            2: 2
+            # 2: 2
         }
+
+    def _filter_delete(self, names):
+        return [name for name in names if 'delete_' not in name]
 
     def _gather_paths(self, images_dir, masks_dir, names):
         images_path = []
@@ -93,7 +98,13 @@ class PseudoDataset(Dataset):
         cv2.setNumThreads(0)
         cv2.ocl.setUseOpenCL(False)
         maskname = osp.basename(self.masks_path[i])
-        im_proj, im_geotrans, im_data = read_image(osp.join(osp.dirname(self.images_path[i]), maskname))
+
+        if '.npy' in maskname:
+            im_proj, im_geotrans, im_data = read_image(osp.join(osp.dirname(self.images_path[i]), maskname[:-4]+'.tif'))
+            mask_data = np.load(self.masks_path[i])
+        else:
+            im_proj, im_geotrans, im_data = read_image(osp.join(osp.dirname(self.images_path[i]), maskname))
+            mask_data = self.convert_label(cv2.imread(self.masks_path[i], 0))
         # im_data = read_image(osp.join(self.images_dir, nameid))
 
         # im_data = im_data[:,:,:3]   # rgb
@@ -104,7 +115,7 @@ class PseudoDataset(Dataset):
         sample = dict(
             id=maskname,
             image=im_data,
-            mask=self.convert_label(cv2.imread(self.masks_path[i], 0)))
+            mask=mask_data)
         # apply augmentations
         if self.transform is not None:
             sample = self.transform(**sample)

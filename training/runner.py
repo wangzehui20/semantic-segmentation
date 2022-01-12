@@ -7,6 +7,7 @@ import time
 import torch
 import csv
 import shutil
+import torch.nn.functional as F
 from typing import Optional, Type
 import warnings
 import torch.distributed as dist
@@ -34,7 +35,7 @@ def graytorgb(img):
 
 def convert_label(label, inverse=False):
     label_mapping = {
-        2: 0,
+        0: 0,
         80: 1
     }
     tmp = label.copy()
@@ -197,29 +198,29 @@ class Runner:
         return torch.mean(concat)
 
     # create pseudo dataloader including train dataset and pseudo dataset
-    def _pseudo_dataloader(self):
+    def _generate_dataloader(self, dataset, dataloader, distributed):
         pseudo_dataset = PseudoDataset(
-            **self.pseudo_dataset
+            **dataset
         )
         pseudo_sampler = None
-        if self.distributed:
+        if distributed:
             pseudo_sampler = torch.utils.data.distributed.DistributedSampler(pseudo_dataset)
 
         pseudo_dataloader = torch.utils.data.DataLoader(
-            pseudo_dataset, **self.pseudo_dataloader, sampler=pseudo_sampler,
+            pseudo_dataset, **dataloader, sampler=pseudo_sampler,
         )
         return pseudo_dataloader
 
-    def _update_pesudo_mask(self):
+    def _update_masks(self, masks_dir):
         """
         delete and create
         :return:
         """
         dist.barrier()
         if self.local_rank == 0:
-            if osp.exists(self.pseudo_dataset.pse_masks_dir):
-                shutil.rmtree(self.pseudo_dataset.pse_masks_dir)
-            os.makedirs(self.pseudo_dataset.pse_masks_dir)
+            if osp.exists(masks_dir):
+                shutil.rmtree(masks_dir)
+            os.makedirs(masks_dir)
         dist.barrier()
 
     @timeit
@@ -328,6 +329,9 @@ class Runner:
         # start training loop
         startt = time.time()
         for epoch in range(initial_epoch, epochs):
+            self.pseudo(valid_dataloader, epoch=epoch)
+            train_dataloader = self._generate_dataloader(self.pseudo_dataset, self.pseudo_dataloader, self.distributed)
+
             if self.train_sampler is not None:  # 必须设置随机数种子，不然不会随机
                 self.train_sampler.set_epoch(epoch)
             if self.local_rank == 0:
@@ -400,9 +404,6 @@ class Runner:
                 callbacks.on_epoch_end(epoch, epoch_logs)
                 if self.local_rank == 0:
                     self.writercsv(logdir, epoch_logs)
-
-            self.pseudo(valid_dataloader, epoch=epoch)
-            train_dataloader = self._pseudo_dataloader()
 
             if self.local_rank == 0:
                 print('Epoch {}/{}'.format(epoch, epochs - 1), time.time() - startt)
@@ -507,10 +508,10 @@ class Runner:
             dataloader,
             steps=None,
             verbose=True,
-            possibility=0.9,
+            possibility=0.5,
             epoch=0
     ):
-        self._update_pesudo_mask()
+        self._update_masks(self.pseudo_dataset.pse_masks_dir)
         self._model_to_mode('eval')
         if self.local_rank == 0:
             print("pseudo start")
@@ -529,6 +530,7 @@ class Runner:
 
             for output_name, score in output.items():
                 classes = score.shape[1]
+                score = F.sigmoid(score)
                 score = score.topk(1, dim=1, largest=True)
                 values = score.values
                 values_idx = values > possibility
@@ -541,10 +543,10 @@ class Runner:
 
                 for i, name in enumerate(batch['id']):
                     if np.all(label[i]==0):
-                        continue
+                        name = 'delete_' + name
 
-                    pseudo_label_path = osp.join(self.pseudo_dataset.pse_masks_dir, name)
-                    cv2.imwrite(pseudo_label_path, convert_label(label[i], inverse=True))
+                    pseudo_label_path = osp.join(self.pseudo_dataset.pse_masks_dir, name[:-4]+'.npy')
+                    np.save(pseudo_label_path, values.data.cpu().numpy().squeeze(1)[i])
 
                     # demo
                     pseudo_dir = osp.dirname(self.pseudo_dataset.pse_masks_dir)
@@ -556,8 +558,8 @@ class Runner:
 
                     cur_pseudo_path = osp.join(cur_pseudo_dir, name[:-4]+'.png')
                     tmp_label = label[i]
-                    tmp_label[tmp_label==2] = 0
-                    tmp_label[tmp_label==80] = 255
+                    # tmp_label[tmp_label==2] = 0
+                    tmp_label[tmp_label==1] = 255
                     cv2.imwrite(cur_pseudo_path, tmp_label)
 
             if verbose and self.local_rank == 0:

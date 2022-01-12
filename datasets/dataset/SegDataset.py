@@ -128,7 +128,7 @@ class SegDataset_6(Dataset):
         self.label_mapping = {
             0: 0,
             80: 1,
-            2: 2
+            # 2: 2
         }
     def _get_ids(self, ids_csv):
         return pd.read_csv(ids_csv)['name'].tolist() if ids_csv and osp.exists(ids_csv) else None
