@@ -1,4 +1,4 @@
-logdir: /data/data/landset30/newmodels_building/UnetPlusPlus/effb3_dicebce_pseudo_13161/
+logdir: /data/data/landset30/newmodels_building/UnetPlusPlus/effb3_dicebce_pseudo/
 gpus: [0,1]
 distributed: true
 fp16: false
@@ -85,7 +85,7 @@ training:
     mask:
       name: DICE_BCE
       init_params:
-        ignore_label: 2
+#        ignore_label: 2
 
   metrics:
     mask:
@@ -96,7 +96,7 @@ training:
   optimizer:
     name: adamw
     init_params:
-      lr: 0.0001
+      lr: 0.00005
 
   scheduler:
     name: PolyLR
