@@ -36,130 +36,82 @@ class SegDataset(Dataset):
 
     def __init__(
             self,
-            images_dir: str,
-            masks_dir: Optional[str] = None,
-            ids_csv: Optional[list] = None,
+            images_csv: str,
             transform_name: Optional[str] = None,
+            load_mask: bool = True,
+            classes: int = 14
     ):
         super().__init__()
-        ids = self._get_ids(ids_csv)
-        self.names = ids if ids is not None else os.listdir(images_dir)
-        self.images_dir = images_dir
-        self.masks_dir = masks_dir
+        self.im_path = self._get_ids(images_csv)
         self.transform = transforms.__dict__[transform_name] if transform_name else None
+        self.load_mask = load_mask
+        self.classes = classes
         self.tfms = pytorchtrans.Compose([pytorchtrans.ToTensor()])
         ignore_label = -1
         self.label_mapping = {
             0: 0,
-            80: 1
+            1: 1,
+            2: 2,
+            3: 3,
+            4: 4,
+            5: 5,
+            6: 6,
+            7: 7,
+            8: 0,
+            9: 0,
+            10: 8,
+            11: 9,
+            12: 10,
+            13: 11,
+            14: 12,
+            15: 13,
         }
 
     def _get_ids(self, ids_csv):
         return pd.read_csv(ids_csv)['name'].tolist() if ids_csv and osp.exists(ids_csv) else None
 
     def __len__(self):
-        return len(self.names)
+        return len(self.im_path)
 
     def __getitem__(self, i):
         cv2.setNumThreads(0)
         cv2.ocl.setUseOpenCL(False)
 
-        name = self.names[i]
+        name = self.im_path[i].split('/')[-1]
         nameid = name  # .tif
         maskname = name
 
-        im_proj, im_geotrans, im_data = read_image(osp.join(self.images_dir, nameid))
+        im_data = read_image(self.im_path[i])
+        if self.load_mask:
+            mask_data = self.convert_label(cv2.imread(self.im_path[i].replace('image', 'mask'), 0))
+            mask_data = np.identity(self.classes)[mask_data]
         # im_data = read_image(osp.join(self.images_dir, nameid))
 
-        im_data = im_data[:,:,:3]   # rgb
+        # im_data = im_data[:,:,:3]   # rgb
         # im_data = im_data.take([1,2,3],2)
         # im_data = add_band(im_data, norm(ndbi(im_data)))   # building
 
         # read data sample
-        sample = dict(
-            id=maskname,
-            image=im_data,
-            mask=self.convert_label(cv2.imread(osp.join(self.masks_dir, maskname), 0)))
-        # apply augmentations
-        if self.transform is not None:
-            sample = self.transform(**sample)
-        sample['mask'] = pytorchtrans.ToTensor()(sample['mask'].astype('float32')).float()  # expand first dim for mask
-        # sample['mask'] = sample['mask'][0]
-        sample['mask'] = sample['mask']
+            sample = dict(
+                id=maskname,
+                image=im_data,
+                mask=mask_data)
+            # apply augmentations
+            if self.transform is not None:
+                sample = self.transform(**sample)
+            sample['mask'] = pytorchtrans.ToTensor()(sample['mask'].astype('float32')).long()  # expand first dim for mask
+            # sample['mask'] = sample['mask'][0]
+            sample['mask'] = sample['mask']
+
+        else:
+            sample = dict(
+                id=maskname,
+                image=im_data)
+            if self.transform is not None:
+                sample = self.transform(**sample)
         sample['image'] = self.tfms(np.ascontiguousarray(sample['image']).astype('float32')).float()
         sample['image'] -= torch.tensor([128.0, 128.0, 128.0]).reshape(3, 1, 1)
         sample['image'] /= torch.tensor([128.0, 128.0, 128.0]).reshape(3, 1, 1)
-
-        return sample
-
-    def convert_label(self, label, inverse=False):
-        label_mapping = self.label_mapping
-        tmp = label.copy()
-        if inverse:
-            for v, k in self.label_mapping.items():
-                label[tmp == k] = v
-        else:
-            for k, v in self.label_mapping.items():
-                label[tmp == k] = v
-            label[label > len(label_mapping) - 1] = 0
-        return label
-
-
-class SegDataset_6(Dataset):
-    """
-    band number is 6
-    """
-
-    def __init__(
-            self,
-            images_dir: str,
-            masks_dir: Optional[str] = None,
-            ids_csv: Optional[list] = None,
-            transform_name: Optional[str] = None,
-    ):
-        super().__init__()
-        ids = self._get_ids(ids_csv)
-        self.names = ids if ids is not None else os.listdir(images_dir)
-        self.images_dir = images_dir
-        self.masks_dir = masks_dir
-        self.transform = transforms.__dict__[transform_name] if transform_name else None
-        self.tfms = pytorchtrans.Compose([pytorchtrans.ToTensor()])
-        ignore_label = -1
-        self.label_mapping = {
-            0: 0,
-            80: 1,
-            # 2: 2
-        }
-    def _get_ids(self, ids_csv):
-        return pd.read_csv(ids_csv)['name'].tolist() if ids_csv and osp.exists(ids_csv) else None
-
-    def __len__(self):
-        return len(self.names)
-
-    def __getitem__(self, i):
-        cv2.setNumThreads(0)
-        cv2.ocl.setUseOpenCL(False)
-
-        name = self.names[i]
-        nameid = name  # .tif
-        maskname = name
-
-        im_proj, im_geotrans, im_data = read_image(osp.join(self.images_dir, nameid))
-
-        # read data sample
-        sample = dict(
-            id=maskname,
-            image=im_data,
-            mask=self.convert_label(cv2.imread(osp.join(self.masks_dir, maskname), 0)))
-        # apply augmentations
-        if self.transform is not None:
-            sample = self.transform(**sample)
-        sample['mask'] = pytorchtrans.ToTensor()(sample['mask'].astype('float32')).float()  # expand first dim for mask
-        # sample['mask'] = sample['mask'][0]
-        sample['mask'] = sample['mask']
-        sample['image'] = self.tfms(np.ascontiguousarray(sample['image']).astype('float32')).float()
-        sample['image'] -= torch.tensor([128.0, 128.0, 128.0, 128.0, 128.0, 128.0]).reshape(6, 1, 1)
-        sample['image'] /= torch.tensor([128.0, 128.0, 128.0, 128.0, 128.0, 128.0]).reshape(6, 1, 1)
 
         return sample
 

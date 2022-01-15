@@ -1,2 +1,2 @@
-from .SegDataset import SegDataset, SegDataset_6
+from .SegDataset import SegDataset
 from .PseudoDataset import PseudoDataset

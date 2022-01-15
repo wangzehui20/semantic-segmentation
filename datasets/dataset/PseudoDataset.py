@@ -3,6 +3,7 @@ import os.path as osp
 import cv2
 import numpy as np
 import torch
+import pandas as pd
 from torch.utils.data import Dataset
 from typing import Optional
 from . import transforms
@@ -35,72 +36,73 @@ class PseudoDataset(Dataset):
 
     def __init__(
             self,
-            images_dir: str,
-            masks_dir: Optional[str] = None,
-            pse_images_dir: str = None,
-            pse_masks_dir: str = None,
-            ids: Optional[list] = None,
-            pse_ids: Optional[list] = None,
+            labeled_images_csv: str,
+            unlabeled_images_csv: Optional[str] = None,
             transform_name: Optional[str] = None,
+            classes = 14
     ):
         super().__init__()
-        self.names = ids if ids is not None else os.listdir(images_dir)
-        self.images_dir = images_dir
-        self.masks_dir = masks_dir
-
-        # pseudo images and masks
-        self.pse_names = pse_ids if pse_ids is not None else os.listdir(pse_images_dir)
-        self.pse_images_dir = pse_images_dir
-        self.pse_masks_dir = pse_masks_dir
-
-        images_path, masks_path = self.gather_paths(images_dir, masks_dir, self.names)
-        pse_images_path, pse_masks_path = self.gather_paths(pse_images_dir, pse_masks_dir, self.pse_names)
-
-        self.images_path = images_path.extend(pse_images_path)
-        self.masks_path = masks_path.extend(pse_masks_path)
-
+        self.im_path = []
+        labeled_impath = self._get_ids(labeled_images_csv)
+        unlabeled_impath = self._get_ids(unlabeled_images_csv)
+        self.classes = classes
+        self.im_path.extend(labeled_impath)
+        self.im_path.extend(unlabeled_impath)
         self.transform = transforms.__dict__[transform_name] if transform_name else None
         self.tfms = pytorchtrans.Compose([pytorchtrans.ToTensor()])
         ignore_label = -1
         self.label_mapping = {
             0: 0,
-            80: 1
+            1: 1,
+            2: 2,
+            3: 3,
+            4: 4,
+            5: 5,
+            6: 6,
+            7: 7,
+            8: 0,
+            9: 0,
+            10: 8,
+            11: 9,
+            12: 10,
+            13: 11,
+            14: 12,
+            15: 13,
         }
 
-    def gather_paths(self, images_dir, masks_dir, names):
-        images_path = []
-        masks_path = []
-        for name in names:
-            images_path.append(osp.join(images_dir, name))
-            masks_path.append(osp.join(masks_dir, name))
-        return images_path, masks_path
+    def _get_ids(self, ids_csv):
+        return pd.read_csv(ids_csv)['name'].tolist() if ids_csv and osp.exists(ids_csv) else None
 
     def __len__(self):
-        return len(self.images_path)
+        return len(self.im_path)
 
     def __getitem__(self, i):
         cv2.setNumThreads(0)
         cv2.ocl.setUseOpenCL(False)
 
-        maskname = osp.basename(self.images_path[i])
-        im_proj, im_geotrans, im_data = read_image(self.images_path[i])
-        # im_data = read_image(osp.join(self.images_dir, nameid))
+        name = self.im_path[i].split('/')[-1]
+        nameid = name  # .tif
+        maskname = name
 
-        im_data = im_data[:,:,:3]   # rgb
-        # im_data = im_data.take([1,2,3],2)
-        # im_data = add_band(im_data, norm(ndbi(im_data)))   # building
+        im_data = read_image(self.im_path[i])
+        mask_path = self.im_path[i].replace('image', 'mask')
+        if os.path.exists(mask_path):
+            mask_data = self.convert_label(cv2.imread(mask_path, 0))
+            mask_data = np.identity(self.classes)[mask_data]
+        else:
+            mask_data = np.load(mask_path[:-4]+'.npy')
 
         # read data sample
         sample = dict(
             id=maskname,
             image=im_data,
-            mask=self.convert_label(cv2.imread(self.masks_path, 0)))
+            mask=mask_data)
         # apply augmentations
         if self.transform is not None:
             sample = self.transform(**sample)
-        sample['mask'] = pytorchtrans.ToTensor()(sample['mask'].astype('float32')).float()  # expand first dim for mask
-        # sample['mask'] = sample['mask'][0]
-        sample['mask'] = sample['mask']
+        sample['mask'] = pytorchtrans.ToTensor()(sample['mask'].astype('float32')).long()  # expand first dim for mask
+        sample['mask'] = sample['mask'][0]
+        # sample['mask'] = sample['mask']
         sample['image'] = self.tfms(np.ascontiguousarray(sample['image']).astype('float32')).float()
         sample['image'] -= torch.tensor([128.0, 128.0, 128.0]).reshape(3, 1, 1)
         sample['image'] /= torch.tensor([128.0, 128.0, 128.0]).reshape(3, 1, 1)

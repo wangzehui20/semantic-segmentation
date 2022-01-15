@@ -322,7 +322,7 @@ class Lovaszsoftmax(nn.Module):
 
 
 class CrossEntropy(base.Loss):
-    def __init__(self, ignore_label=0, weight=None):
+    def __init__(self, ignore_label=-1, weight=None):
         super(CrossEntropy, self).__init__()
         self.ignore_label = ignore_label
         self.criterion = nn.CrossEntropyLoss(weight=weight,
@@ -357,7 +357,7 @@ class FocalLoss(nn.Module):
             return focal_loss.mean()
         else:
             return focal_loss.sum()
-
+        # self.dice = DiceLoss(activation='logsoftmax', ignore_channels=ignore_label)
 
 
 class PixelContrastLoss(nn.Module):
@@ -494,18 +494,6 @@ class PixelContrastLoss(nn.Module):
         return loss
 
 
-class BCE_SCE(base.Loss):
-    def __init__(self, ignore_label=0):
-        super(BCE_SCE, self).__init__()
-        self.ignore_index = ignore_label
-        self.dice = smp_loss.DiceLoss(mode='multiclass', ignore_index=ignore_label)
-        # self.dice = DiceLoss(activation='logsoftmax', ignore_channels=ignore_label)
-        self.sce = smp_loss.SoftCrossEntropyLoss(smooth_factor=0.1, ignore_index=ignore_label)
-
-    def forward(self, inputs, targets):
-        return self.dice(inputs, targets)*0.5 + self.sce(inputs, targets)*0.5
-
-
 class BCE_SCE_Contrast(base.Loss):
     def __init__(self, ignore_label=0):
         super(BCE_SCE_Contrast, self).__init__()
@@ -524,7 +512,6 @@ class DICE_SCE(base.Loss):
         super(DICE_SCE, self).__init__()
         self.ignore_index = ignore_label
         self.dice = smp_loss.DiceLoss(mode='multiclass', ignore_index=ignore_label)
-        # self.dice = DiceLoss(activation='logsoftmax', ignore_channels=ignore_label)
         self.sce = smp_loss.SoftCrossEntropyLoss(smooth_factor=0.1, ignore_index=ignore_label)
 
     def forward(self, inputs, targets):
@@ -763,3 +750,21 @@ class ChangeLoss(nn.Module):
             floss = self.bce(fseg, amask)
 
         return floss
+
+
+class SoftLabelCrossEntropyLoss(nn.Module):
+    def __init__(self,
+                 reduction : str = 'mean'):
+        super().__init__()
+        self.reduction = reduction
+
+    def forward(self, pr, gt):
+        assert pr.shape == gt.shape
+        log_prob = torch.nn.functional.log_softmax(pr, dim=1)
+        b = pr.shape[0]
+        if self.reduction == 'mean':
+            loss = torch.sum(torch.mul(-log_prob, gt)) / b
+        elif self.reduction == 'sum':
+            loss = torch.sum(torch.mul(-log_prob, gt))
+        return loss
+

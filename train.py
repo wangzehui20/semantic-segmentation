@@ -142,6 +142,19 @@ def main(cfg):
         valid_dataset, **cfg.data.valid_dataloader, sampler=valid_sampler,
     )
 
+    unlabeled_dataset = getters.get_dataset(
+        name=cfg.data.unlabeled_dataset.name,
+        init_params=cfg.data.unlabeled_dataset.init_params,
+    )
+
+    unlabeled_sampler = None
+    if cfg.distributed:
+        unlabeled_sampler = torch.utils.data.distributed.DistributedSampler(unlabeled_dataset)
+
+    unlabeled_dataloader = torch.utils.data.DataLoader(
+        unlabeled_dataset, **cfg.data.unlabeled_dataloader, sampler=unlabeled_sampler,
+    )
+
 
     # --------------------------------------------------
     # define losses and metrics functions
@@ -238,6 +251,7 @@ def main(cfg):
         train_sampler=train_sampler,
         distributed=cfg.distributed,
         **cfg.training.runner,
+        unlabeled_dataloader=unlabeled_dataloader,
         pseudo_dataset=cfg.data.pseudo_dataset.init_params,
         pseudo_dataloader=cfg.data.pseudo_dataloader
     )
@@ -249,7 +263,7 @@ def main(cfg):
     )
 
     runner.fit(
-        train_dataloader=train_dataloader,
+        train_dataloader=unlabeled_dataloader,
         valid_dataloader=valid_dataloader,
         callbacks=callbacks,
         logdir=cfg.logdir,

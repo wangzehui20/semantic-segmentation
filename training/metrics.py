@@ -40,7 +40,7 @@ class IoU(base.Metric):
 class MeanIoU(base.Metric):
     __name__ = "mean_iou"
 
-    def __init__(self, ignore_label=-1):
+    def __init__(self, ignore_label=0):
         super().__init__()
         self.eps = 1e-5
         self.intersection = {}
@@ -55,6 +55,8 @@ class MeanIoU(base.Metric):
     def __call__(self, prediction, target):
         rng = prediction.shape[1]
         prediction = torch.argmax(torch.nn.functional.softmax(prediction, dim=1), dim=1)
+        if len(target.shape)==4:   # soft label
+            target = torch.argmax(target, dim=1)
         for index in range(rng):
             # ignore background
             if index == self.ignore_label: continue
@@ -81,7 +83,7 @@ class MeanIoU(base.Metric):
             union = self.union[k]
             score += (intersection + self.eps) / (union + self.eps)
 
-        return score / rng
+        return score / (rng-1)
 
 
 class MicroF1(base.Metric):

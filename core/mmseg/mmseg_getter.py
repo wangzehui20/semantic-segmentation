@@ -100,7 +100,7 @@ config_get = {
         "config_path": "core/mmseg/config/ocrnet_hr18.py"
     },
     "segformer_b0": {
-        "config_path": "/data/code/segmentation/core/mmseg/config/segformer_mit-b0.py"
+        "config_path": "/data/code/semantic-segmentation-semi-supervised-learning/core/mmseg/config/segformer_mit-b0.py"
     },
     "segformer_b3": {
         "config_path": "core/mmseg/config/segformer_mit-b3.py"

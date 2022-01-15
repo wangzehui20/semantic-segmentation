@@ -36,7 +36,19 @@ def graytorgb(img):
 def convert_label(label, inverse=False):
     label_mapping = {
         0: 0,
-        80: 1
+        1: 1,
+        2: 2,
+        3: 3,
+        4: 4,
+        5: 5,
+        6: 6,
+        7: 7,
+        10: 8,
+        11: 9,
+        12: 10,
+        13: 11,
+        14: 12,
+        15: 13,
     }
     tmp = label.copy()
     if inverse:
@@ -107,6 +119,7 @@ class Runner:
             fp16=False,
             train_sampler=None,
             distributed=False,
+            unlabeled_dataloader=None,
             pseudo_dataset=None,
             pseudo_dataloader=None
     ):
@@ -126,6 +139,7 @@ class Runner:
         self.train_sampler = train_sampler
         self.scaler = torch.cuda.amp.GradScaler()
         self.distributed = distributed
+        self.unlabeled_dataloader = unlabeled_dataloader
         self.pseudo_dataset = pseudo_dataset
         self.pseudo_dataloader = pseudo_dataloader
 
@@ -198,7 +212,7 @@ class Runner:
         return torch.mean(concat)
 
     # create pseudo dataloader including train dataset and pseudo dataset
-    def _generate_dataloader(self, dataset, dataloader, distributed):
+    def _generate_pseudo_dataloader(self, dataset, dataloader, distributed):
         pseudo_dataset = PseudoDataset(
             **dataset
         )
@@ -221,6 +235,12 @@ class Runner:
             if osp.exists(masks_dir):
                 shutil.rmtree(masks_dir)
             os.makedirs(masks_dir)
+        dist.barrier()
+
+    def _check_dir(self, dir):
+        dist.barrier()
+        if self.local_rank == 0 and not osp.exists(dir):
+            os.makedirs(dir)
         dist.barrier()
 
     @timeit
@@ -329,8 +349,10 @@ class Runner:
         # start training loop
         startt = time.time()
         for epoch in range(initial_epoch, epochs):
-            self.pseudo(valid_dataloader, epoch=epoch)
-            train_dataloader = self._generate_dataloader(self.pseudo_dataset, self.pseudo_dataloader, self.distributed)
+            # semi-supervised learning
+            if epoch > 0:
+                self.pseudo(self.unlabeled_dataloader, epoch=epoch)
+            train_dataloader = self._generate_pseudo_dataloader(self.pseudo_dataset, self.pseudo_dataloader, self.distributed)
 
             if self.train_sampler is not None:  # 必须设置随机数种子，不然不会随机
                 self.train_sampler.set_epoch(epoch)
@@ -508,7 +530,6 @@ class Runner:
             dataloader,
             steps=None,
             verbose=True,
-            possibility=0.5,
             epoch=0
     ):
         self._update_masks(self.pseudo_dataset.pse_masks_dir)
@@ -528,39 +549,36 @@ class Runner:
             else:
                 output = self._feed_batch(batch)
 
-            for output_name, score in output.items():
-                classes = score.shape[1]
-                score = F.sigmoid(score)
-                score = score.topk(1, dim=1, largest=True)
-                values = score.values
-                values_idx = values > possibility
-                if classes==1:
-                    label = values_idx.data.cpu().numpy().squeeze(1).astype(np.uint8)
+            for output_name, output_value in output.items():
+                if output_value.shape[1]==1:
+                    label = F.sigmoid(output_value)
+                    soft_label = label.data.cpu().numpy().squeeze(1)
+                    hard_label = (label>0.5).data.cpu().numpy().squeeze(1).astype(np.uint8)
                 else:
                     # multi class
-                    indices = score.indices
-                    label = (indices * values_idx).data.cpu().numpy().squeeze(1).astype(np.uint8)
+                    label = F.softmax(output_value, dim=1)
+                    soft_label = label.data.cpu().numpy()
+                    hard_label = torch.argmax(label, dim=1).data.cpu().numpy().astype(np.uint8)
 
                 for i, name in enumerate(batch['id']):
-                    if np.all(label[i]==0):
+                    if np.all(hard_label[i]==0):
                         name = 'delete_' + name
 
                     pseudo_label_path = osp.join(self.pseudo_dataset.pse_masks_dir, name[:-4]+'.npy')
-                    np.save(pseudo_label_path, values.data.cpu().numpy().squeeze(1)[i])
+                    np.save(pseudo_label_path, soft_label[i])
 
-                    # demo
+                    # hard label
                     pseudo_dir = osp.dirname(self.pseudo_dataset.pse_masks_dir)
                     cur_pseudo_dir = osp.join(pseudo_dir, 'pseudo_{}'.format(epoch))
-                    dist.barrier()
-                    if self.local_rank == 0 and not osp.exists(cur_pseudo_dir):
-                        os.makedirs(cur_pseudo_dir)
-                    dist.barrier()
-
+                    self._check_dir(cur_pseudo_dir)
                     cur_pseudo_path = osp.join(cur_pseudo_dir, name[:-4]+'.png')
-                    tmp_label = label[i]
-                    # tmp_label[tmp_label==2] = 0
-                    tmp_label[tmp_label==1] = 255
-                    cv2.imwrite(cur_pseudo_path, tmp_label)
+                    tmp_label = hard_label[i]
+
+                    if len(soft_label.shape)==3:
+                        tmp_label[tmp_label==1] = 255
+                        cv2.imwrite(cur_pseudo_path, tmp_label)
+                    else:
+                        cv2.imwrite(cur_pseudo_path, convert_label(tmp_label, inverse=True))
 
             if verbose and self.local_rank == 0:
                 pbar.update()
