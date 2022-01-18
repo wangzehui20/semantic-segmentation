@@ -2,7 +2,7 @@
 import os
 from tqdm import tqdm
 from preprocess_align import LabelAlign, data_process
-from common import is_dir, get_imlist, save_json
+from common import check_dir, get_imlist, save_json
 from config import Config
 
 
@@ -20,25 +20,19 @@ def get_train_data(orimg_dir, dstimg_dir, orilabel_dir, dstlabel_dir, cfg):
     return start_idx, statis_dict
 
 
-def folder():
-    cfg = Config()
-    train_orimg_root_dir = rf'{cfg.ORI_DIR}/labeled_train'
-    names = os.listdir(train_orimg_root_dir)
-    for name in names:
-        train_orimg_dir = rf"{cfg.ORI_DIR}/labeled_train/{name}/BDORTHO"
-        train_orilabel_dir = rf"{cfg.ORI_DIR}/labeled_train/{name}/UrbanAtlas"
-        train_clpimg_dir = rf"{cfg.CLIP_DIR}/labeled_train/{cfg.FILE_NAME}/{name}/image"
-        train_clplabel_dir = rf"{cfg.CLIP_DIR}/labeled_train/{cfg.FILE_NAME}/{name}/mask"
-        train_statis_path = rf"{cfg.CLIP_DIR}/labeled_train/{cfg.FILE_NAME}/{name}/train_statis.json"
-        is_dir(train_clpimg_dir)
-        is_dir(train_clplabel_dir)
-
-        end_idx, statis_dict = get_train_data(train_orimg_dir, train_clpimg_dir, train_orilabel_dir, train_clplabel_dir, cfg)
-        print(f"Generate train {name} image and label successfully")
-
-        save_json(train_statis_path, statis_dict)
-        print(f"Generate train {name} image statistics successfully")
-
-
 if __name__ == '__main__':
-    folder()    
+    cfg = Config()
+
+    train_orimg_dir = rf"{cfg.ORI_DIR}/labeled_train/image"
+    train_orilabel_dir = rf"{cfg.ORI_DIR}/labeled_train/mask"
+    train_clpimg_dir = rf"{cfg.CLIP_DIR}/{cfg.FILE_NAME}/labeled_train/image"
+    train_clplabel_dir = rf"{cfg.CLIP_DIR}/{cfg.FILE_NAME}/labeled_train/mask"
+    train_statis_path = rf"{cfg.CLIP_DIR}/{cfg.FILE_NAME}/labeled_train/train_statis.json"
+    check_dir(train_clpimg_dir)
+    check_dir(train_clplabel_dir)
+
+    end_idx, statis_dict = get_train_data(train_orimg_dir, train_clpimg_dir, train_orilabel_dir, train_clplabel_dir, cfg)
+    print(f"Generate image and label successfully")
+
+    save_json(train_statis_path, statis_dict)
+    print(f"Generate image statistics successfully")   

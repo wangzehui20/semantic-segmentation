@@ -48,6 +48,12 @@ train_transform_4 = A.Compose([
     A.Flip(p=0.75),
 ])
 
+train_transform_5 = A.Compose([
+    # A.RandomScale(scale_limit=0.3, p=0.5),
+    A.RandomCrop(384, 384, p=1.),
+    A.Flip(p=0.75),
+])
+
 # crop 1024
 train_transform_7 = A.Compose([
     # A.RandomScale(scale_limit=0.3, p=0.5),

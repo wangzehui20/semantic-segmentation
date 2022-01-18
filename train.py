@@ -263,7 +263,7 @@ def main(cfg):
     )
 
     runner.fit(
-        train_dataloader=unlabeled_dataloader,
+        train_dataloader=train_dataloader,
         valid_dataloader=valid_dataloader,
         callbacks=callbacks,
         logdir=cfg.logdir,

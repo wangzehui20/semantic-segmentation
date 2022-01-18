@@ -18,40 +18,45 @@ model:
 tta: False
 
 data:
-  
-  # tv_path: /data/data/landset30/Unet_bifpn/new512_128/pixel_ratio_8000.csv
   # datasets
   train_dataset:
     name: SegDataset
     init_params:
-      images_csv: /data/data/semi_compete/clip/labeled_train/512_128/trainpath.csv
+      images_dir: /data/data/semi_compete/clip_integrate/512_128/labeled_train/image
+      masks_dir: /data/data/semi_compete/clip_integrate/512_128/labeled_train/mask
+      ids_csv: /data/data/semi_compete/clip_integrate/512_128/labeled_train/trainpath.csv
       transform_name: train_transform_1
 
   valid_dataset:
     name: SegDataset
     init_params:
-      images_csv: /data/data/semi_compete/clip/labeled_train/512_128/valpath.csv
+      images_dir: /data/data/semi_compete/clip_integrate/512_128/labeled_train/image
+      masks_dir: /data/data/semi_compete/clip_integrate/512_128/labeled_train/mask
+      ids_csv: /data/data/semi_compete/clip_integrate/512_128/labeled_train/valpath.csv
       transform_name: test_transform_1
 
   test_dataset:
     name: SegDataset
     init_params:
-      images_csv: /data/data/semi_compete/clip/val/512_128/testpath.csv
+      images_dir: /data/data/semi_compete/clip_integrate/512_128/val/image
+      ids_csv: /data/data/semi_compete/clip_integrate/512_128/val/test.csv
       transform_name: test_transform_1
 
   unlabeled_dataset:
     name: SegDataset
     init_params:
-      images_csv: /data/data/semi_compete/clip/unlabeled_train/512_128/pseudo.csv
+      images_dir: /data/data/semi_compete/clip_integrate/512_128/unlabeled_train/image
+      ids_csv: /data/data/semi_compete/clip_integrate/512_128/unlabeled_train/pseudo.csv
       transform_name: test_transform_1
-      load_mask: false
       
   pseudo_dataset:
     name: PseudoDataset
     init_params:
-      labeled_images_csv: /data/data/semi_compete/clip/labeled_train/512_128/trainpath.csv
-      unlabeled_images_csv: /data/data/semi_compete/clip/unlabeled_train/512_128/pseudo.csv
-      pse_masks_dir: /data/data/semi_compete/clip/unlabeled_train/pseudo/mask
+      images_dir: /data/data/semi_compete/clip_integrate/512_128/labeled_train/image
+      masks_dir: /data/data/semi_compete/clip_integrate/512_128/labeled_train/mask
+      pse_images_dir: /data/data/semi_compete/clip_integrate/512_128/unlabeled_train/image
+      pse_masks_dir: /data/data/semi_compete/clip_integrate/512_128/unlabeled_train/mask
+      ids_csv: /data/data/semi_compete/clip_integrate/512_128/labeled_train/trainpath.csv
       transform_name: train_transform_1
 
   # loaders

@@ -1,4 +1,4 @@
-logdir: /data/data/semi_compete/models/segformer/b0/
+logdir: /data/data/semi_compete/models/segformer/b0_cedice/
 gpus: [0]
 distributed: true
 fp16: false
@@ -59,34 +59,34 @@ data:
 
   # loaders
   train_dataloader:
-    batch_size: 16
+    batch_size: 15
     drop_last: true
     pin_memory: true
     num_workers: 0
 
   valid_dataloader:
-    batch_size: 16
+    batch_size: 15
     shuffle: false
     drop_last: false
     pin_memory: true
     num_workers: 0
 
   test_dataloader:
-    batch_size: 16
+    batch_size: 15
     shuffle: false
     drop_last: false
     pin_memory: false
     num_workers: 0
   
   unlabeled_dataloader:
-    batch_size: 16
+    batch_size: 15
     shuffle: false
     drop_last: false
     pin_memory: true
     num_workers: 0
 
   pseudo_dataloader:
-    batch_size: 16
+    batch_size: 15
     drop_last: true
     pin_memory: true
     num_workers: 0
@@ -95,7 +95,7 @@ training:
 
   losses:
     mask:
-      name: CrossEntropy
+      name: CEDiceLoss
       init_params:
 
   metrics:

@@ -12,68 +12,96 @@ model:
   init_params:
     in_channels: 3
     classes: 14
-    activation: softmax
-  auxiliary_head:
     with_auxiliary_head: false
-
-
 
 tta: False
 
 data:
-  
-  # tv_path: /data/data/landset30/Unet_bifpn/new512_128/pixel_ratio_8000.csv
   # datasets
   train_dataset:
     name: SegDataset
     init_params:
-      images_csv: /data/data/semi_compete/clip/labeled_train/512_128/trainpath.csv
+      images_dir: /data/data/semi_compete/clip_integrate/512_128/labeled_train/image
+      masks_dir: /data/data/semi_compete/clip_integrate/512_128/labeled_train/mask
+      ids_csv: /data/data/semi_compete/clip_integrate/512_128/labeled_train/trainpath.csv
       transform_name: train_transform_1
 
   valid_dataset:
     name: SegDataset
     init_params:
-      images_csv: /data/data/semi_compete/clip/labeled_train/512_128/valpath.csv
+      images_dir: /data/data/semi_compete/clip_integrate/512_128/labeled_train/image
+      masks_dir: /data/data/semi_compete/clip_integrate/512_128/labeled_train/mask
+      ids_csv: /data/data/semi_compete/clip_integrate/512_128/labeled_train/valpath.csv
       transform_name: test_transform_1
 
   test_dataset:
     name: SegDataset
     init_params:
-      images_dir: /data/data/landset30/Unet_bifpn/new512_128/test/image
-      masks_dir: /data/data/landset30/Unet_bifpn/new512_128/test/mask
+      images_dir: /data/data/semi_compete/clip_integrate/512_128/val/image
+      ids_csv: /data/data/semi_compete/clip_integrate/512_128/val/test.csv
       transform_name: test_transform_1
+
+  unlabeled_dataset:
+    name: SegDataset
+    init_params:
+      images_dir: /data/data/semi_compete/clip_integrate/512_128/unlabeled_train/image
+      ids_csv: /data/data/semi_compete/clip_integrate/512_128/unlabeled_train/pseudo.csv
+      transform_name: test_transform_1
+      
+  pseudo_dataset:
+    name: PseudoDataset
+    init_params:
+      images_dir: /data/data/semi_compete/clip_integrate/512_128/labeled_train/image
+      masks_dir: /data/data/semi_compete/clip_integrate/512_128/labeled_train/mask
+      pse_images_dir: /data/data/semi_compete/clip_integrate/512_128/unlabeled_train/image
+      pse_masks_dir: /data/data/semi_compete/clip_integrate/512_128/unlabeled_train/mask
+      ids_csv: /data/data/semi_compete/clip_integrate/512_128/labeled_train/trainpath.csv
+      transform_name: train_transform_1
 
   # loaders
   train_dataloader:
-    batch_size: 3
+    batch_size: 5
     drop_last: true
     pin_memory: true
     num_workers: 0
 
   valid_dataloader:
-    batch_size: 3
+    batch_size: 5
     shuffle: false
     drop_last: false
     pin_memory: true
     num_workers: 0
 
   test_dataloader:
-    batch_size: 3
+    batch_size: 5
     shuffle: false
     drop_last: false
     pin_memory: false
+    num_workers: 0
+  
+  unlabeled_dataloader:
+    batch_size: 5
+    shuffle: false
+    drop_last: false
+    pin_memory: true
+    num_workers: 0
+
+  pseudo_dataloader:
+    batch_size: 5
+    drop_last: true
+    pin_memory: true
     num_workers: 0
 
 training:
 
   losses:
     mask:
-      name: BCEDiceLoss
+      name: CrossEntropy
       init_params:
 
   metrics:
     mask:
-      - name: MicroF1
+      - name: MeanIoU
         init_params:
 
   optimizer:

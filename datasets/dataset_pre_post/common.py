@@ -9,7 +9,7 @@ from collections import Counter
 REMOVE_THRED = 0.2   # if background ratio > thred, remove this image
 
 
-def is_dir(dir):
+def check_dir(dir):
     if not os.path.exists(dir): os.makedirs(dir)
 
 

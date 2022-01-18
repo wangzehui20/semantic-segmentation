@@ -350,9 +350,9 @@ class Runner:
         startt = time.time()
         for epoch in range(initial_epoch, epochs):
             # semi-supervised learning
-            if epoch > 0:
+            if epoch >= 40:
                 self.pseudo(self.unlabeled_dataloader, epoch=epoch)
-            train_dataloader = self._generate_pseudo_dataloader(self.pseudo_dataset, self.pseudo_dataloader, self.distributed)
+                train_dataloader = self._generate_pseudo_dataloader(self.pseudo_dataset, self.pseudo_dataloader, self.distributed)
 
             if self.train_sampler is not None:  # 必须设置随机数种子，不然不会随机
                 self.train_sampler.set_epoch(epoch)

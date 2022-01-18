@@ -349,9 +349,12 @@ class WindowClip():
 
     # half overlap merge
     def recover_clip_box(self, pred_dir, mask_merge, img_info, cfg):
-        img_path = os.path.join(pred_dir, img_info[0][:-4]+'.npy')
-        # img = cv2.imread(img_path, cv2.IMREAD_GRAYSCALE)
-        img = np.load(img_path)
+        img_path = os.path.join(pred_dir, img_info[0][:-4]+'.png')
+        img = cv2.imread(img_path, cv2.IMREAD_GRAYSCALE)
+        
+        # pred
+        # img_path = os.path.join(pred_dir, img_info[0][:-4]+'.npy')
+        # img = np.load(img_path)
         shift_x, shift_y = img_info[1], img_info[2]
         half_overlap = int(cfg.OVERLAP / 2)
         # x orientation

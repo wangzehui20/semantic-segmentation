@@ -18,40 +18,45 @@ model:
 tta: False
 
 data:
-  
-  # tv_path: /data/data/landset30/Unet_bifpn/new512_128/pixel_ratio_8000.csv
   # datasets
   train_dataset:
     name: SegDataset
     init_params:
-      images_csv: /data/data/semi_compete/clip/tmp/trainpath.csv
+      images_dir: /data/data/semi_compete/clip_integrate/512_128/labeled_train/image
+      masks_dir: /data/data/semi_compete/clip_integrate/512_128/labeled_train/mask
+      ids_csv: /data/data/semi_compete/clip_integrate/512_128/tmp/trainpath.csv
       transform_name: train_transform_1
 
   valid_dataset:
     name: SegDataset
     init_params:
-      images_csv: /data/data/semi_compete/clip/tmp/valpath.csv
+      images_dir: /data/data/semi_compete/clip_integrate/512_128/labeled_train/image
+      masks_dir: /data/data/semi_compete/clip_integrate/512_128/labeled_train/mask
+      ids_csv: /data/data/semi_compete/clip_integrate/512_128/tmp/valpath.csv
       transform_name: test_transform_1
 
   test_dataset:
     name: SegDataset
     init_params:
-      images_csv: /data/data/semi_compete/clip/tmp/testpath.csv
+      images_dir: /data/data/semi_compete/clip_integrate/512_128/val/image
+      ids_csv: /data/data/semi_compete/clip_integrate/512_128/tmp/test.csv
       transform_name: test_transform_1
 
   unlabeled_dataset:
     name: SegDataset
     init_params:
-      images_csv: /data/data/semi_compete/clip/tmp/pseudo.csv
+      images_dir: /data/data/semi_compete/clip_integrate/512_128/unlabeled_train/image
+      ids_csv: /data/data/semi_compete/clip_integrate/512_128/tmp/pseudo.csv
       transform_name: test_transform_1
-      load_mask: false
-
+      
   pseudo_dataset:
     name: PseudoDataset
     init_params:
-      labeled_images_csv: /data/data/semi_compete/clip/tmp/trainpath.csv
-      unlabeled_images_csv: /data/data/semi_compete/clip/tmp/pseudo.csv
-      pse_masks_dir: /data/data/semi_compete/clip/tmp/pseudo/mask
+      images_dir: /data/data/semi_compete/clip_integrate/512_128/labeled_train/image
+      masks_dir: /data/data/semi_compete/clip_integrate/512_128/labeled_train/mask
+      pse_images_dir: /data/data/semi_compete/clip_integrate/512_128/unlabeled_train/image
+      pse_masks_dir: /data/data/semi_compete/clip_integrate/512_128/tmp/mask
+      ids_csv: /data/data/semi_compete/clip_integrate/512_128/tmp/trainpath.csv
       transform_name: train_transform_1
 
   # loaders
@@ -74,7 +79,7 @@ data:
     drop_last: false
     pin_memory: false
     num_workers: 0
-
+  
   unlabeled_dataloader:
     batch_size: 16
     shuffle: false
@@ -103,10 +108,10 @@ training:
   optimizer:
     name: adamw
     init_params:
-      lr: 0.001
+      lr: 0.0005
 
   scheduler:
-    name: WarmupPolyLR
+    name: PolyLR
     init_params:
       epochs: 60
 

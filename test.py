@@ -14,15 +14,27 @@ from testing import ttach
 from testing.ttach.wrappers import SegmentationTTAWrapper
 from training.config import parse_config
 from core.mmodel.mmodel_getter import SegmentationScale
-from datasets.dataset.SegDataset import SegDataset, SegDataset_6
-from datasets.dataset.ChangeDataset import ChangeDataset_label1
-from training.metrics import IoU
+from datasets.dataset.SegDataset import SegDataset
+from training.metrics import IoU, MeanIoU
+from tqdm import tqdm
 
 
 def convert_label(label, inverse=False):
     label_mapping = {
         0: 0,
-        255: 1
+        1: 1,
+        2: 2,
+        3: 3,
+        4: 4,
+        5: 5,
+        6: 6,
+        7: 7,
+        10: 8,
+        11: 9,
+        12: 10,
+        13: 11,
+        14: 12,
+        15: 13,
     }
 
     tmp = label.copy()
@@ -66,24 +78,25 @@ def predict(cfg, model, dataloader):
         names = batch['id']
         pred = model(imgs)
         if pred.shape[1] == 1:
-            # pred = F.sigmoid(pred)
+            pred = F.sigmoid(pred)
             pred = cal_binary_pred(pred)
         else:
             pred = torch.argmax(F.softmax(pred, dim=1), dim=1)
-        gt = batch['mask'].cuda()
+        # gt = batch['mask'].cuda()
+
         # if pred.shape != gt.shape:
         #     pred = pred.squeeze(1)
 
         # hist += fast_hist(pred, gt, classes)
         # f1, _, _ = cal_score(hist)
 
-        value = metric_func(pred, gt)
-        values.append(value)
-        if cfg.lrank == 0:
-            print(i + 1, '/', len(dataloader), ' iou: ', np.mean(values))
+        # value = metric_func(pred, gt)
+        # values.append(value)
+        # if cfg.lrank == 0:
+        #     print(i + 1, '/', len(dataloader), ' iou: ', np.mean(values))
 
         for i, pre in enumerate(pred):
-            pre = pre.data.cpu().numpy().squeeze(0).astype(np.uint8)
+            pre = pre.data.cpu().numpy().astype(np.uint8)
             # pre = cv2.resize(pre, (1024,1024))   # resize to origin size
             savepath = osp.join(cfg.outdir, names[i][:-4]+'.png')
             cv2.imwrite(savepath, convert_label(pre, inverse=True))
@@ -140,8 +153,7 @@ def main(cfg):
     # --------------------------------------------------
 
     print('Creating datasets and loaders..')
-    test_dataset = SegDataset_6(images_dir=cfg.data.test_dataset.init_params.images_dir,
-                            masks_dir=cfg.data.test_dataset.init_params.masks_dir)
+    test_dataset = SegDataset(**cfg.data.test_dataset.init_params)
 
     test_sampler = None
     if cfg.distributed:

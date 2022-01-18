@@ -38,6 +38,7 @@ class Segmodel(nn.Module):
             ispretrain: bool = True,
             pretrain_path="",
             activation=None,
+            with_auxiliary_head: bool = False
     ):
         super().__init__()
         self.activation = Activation(activation)
@@ -56,7 +57,7 @@ class Segmodel(nn.Module):
             cfg.model.decode_head.num_classes = classes
 
         # auxiliary decode head
-        self.with_auxiliary_head = True if 'auxiliary_head' in cfg.model else False
+        self.with_auxiliary_head = with_auxiliary_head
         if self.with_auxiliary_head:
             cfg.model.auxiliary_head.num_classes = classes
             self.auxiliary_head_loss_weight = cfg.model.auxiliary_head.loss_decode.loss_weight
@@ -109,6 +110,6 @@ config_get = {
         "config_path": "core/mmseg/config/segformer_mit-b4.py"
     },
     "upernet_swin-s": {
-        "config_path": "/data/code/segmentation/core/mmseg/config/upernet_swin-s_c96.py"
+        "config_path": "/data/code/semantic-segmentation-semi-supervised-learning/core/mmseg/config/upernet_swin-s_c96.py"
     }
 }

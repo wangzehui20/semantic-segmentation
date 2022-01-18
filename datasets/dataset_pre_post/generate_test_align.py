@@ -2,7 +2,7 @@
 import os
 from tqdm import tqdm
 from preprocess_align import data_process, LabelAlign
-from common import is_dir, get_imlist, save_json
+from common import check_dir, get_imlist, save_json
 from config import Config
 
 
@@ -18,38 +18,29 @@ def startest(imori_dir, imdst_dir, cfg, maskori_dir=None, maskdst_dir=None):
         statis_dict[name] = statis
         for j, clipbox in enumerate(cliplist):
             # (imname, upper-left x, upper-left y)
-            shiftul["{}_{}.tif".format(name, start_idx + j)] = (name, clipbox[2], clipbox[0])
+            shiftul["{}_{}.tif".format(name[:-4], start_idx + j)] = (name, clipbox[2], clipbox[0])   # name remove '.tif'
         start_idx = end_idx
     return shiftul, statis_dict
 
 
-def folder():
-    cfg = Config()
-    imori_root_path = rf'{cfg.ORI_DIR}/unlabeled_train'
-    names = os.listdir(imori_root_path)
-    for name in names:
-        imori_dir = rf"{cfg.ORI_DIR}/unlabeled_train/{name}/BDORTHO"
-        maskori_dir = rf"{cfg.ORI_DIR}/unlabeled_train/{name}/UrbanAtlas"
-        imclp_dir = rf"{cfg.CLIP_DIR}/unlabeled_train/{cfg.FILE_NAME}/{name}/image"
-        maskclp_dir = rf"{cfg.CLIP_DIR}/unlabeled_train/{cfg.FILE_NAME}/{name}/mask"
-        statis_path = rf"{cfg.CLIP_DIR}/unlabeled_train/{cfg.FILE_NAME}/{name}/test_statis.json"
-        shiftul_path = rf"{cfg.CLIP_DIR}/unlabeled_train/{cfg.FILE_NAME}/{name}/test_shiftul.json"
-        is_dir(imclp_dir)
-        is_dir(maskclp_dir)
-        is_dir(os.path.dirname(statis_path))
-        is_dir(os.path.dirname(shiftul_path))
-
-        shiftul, statis_dict = startest(imori_dir, imclp_dir, cfg, 
-                                            maskori_dir=None, maskdst_dir=None)
-        print(f"Generate test {name} image successfully")
-
-        save_json(statis_path, statis_dict)
-        print(f"Generate test {name} statistics successfully")
-
-        save_json(shiftul_path, shiftul)
-        print(f"Generate test {name} shift_ul json successfully")
-
-
 if __name__ == '__main__':
-    folder()
+    cfg = Config()
+
+    imori_dir = rf"{cfg.ORI_DIR}/unlabeled_train/image"
+    imclp_dir = rf"{cfg.CLIP_DIR}/{cfg.FILE_NAME}/unlabeled_train/image"
+    statis_path = rf"{cfg.CLIP_DIR}/{cfg.FILE_NAME}/unlabeled_train/test_statis.json"
+    shiftul_path = rf"{cfg.CLIP_DIR}/{cfg.FILE_NAME}/unlabeled_train/test_shiftul.json"
+    check_dir(imclp_dir)
+    check_dir(os.path.dirname(statis_path))
+    check_dir(os.path.dirname(shiftul_path))
+
+    shiftul, statis_dict = startest(imori_dir, imclp_dir, cfg, 
+                                        maskori_dir=None, maskdst_dir=None)
+    print(f"Generate image successfully")
+
+    save_json(statis_path, statis_dict)
+    print(f"Generate statistics successfully")
+
+    save_json(shiftul_path, shiftul)
+    print(f"Generate shift_ul json successfully")
     

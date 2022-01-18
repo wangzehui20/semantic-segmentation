@@ -518,6 +518,28 @@ class DICE_SCE(base.Loss):
         return self.dice(inputs, targets)*0.5 + self.sce(inputs, targets)*0.5
 
 
+class FocalDiceLoss(base.Loss):
+    def __init__(self, ignore_label=-1):
+        super(FocalDiceLoss, self).__init__()
+        self.ignore_index = ignore_label
+        self.dice_loss = smp_loss.DiceLoss(mode='multiclass', ignore_index=ignore_label)
+        self.focal_loss = smp_loss.FocalLoss(mode='multiclass', ignore_index=ignore_label)
+
+    def forward(self, inputs, targets):
+        return self.dice_loss(inputs, targets) + self.focal_loss(inputs, targets)
+
+
+class CEDiceLoss(base.Loss):
+    def __init__(self, ignore_label=-1):
+        super(CEDiceLoss, self).__init__()
+        self.ignore_index = ignore_label
+        self.dice_loss = smp_loss.DiceLoss(mode='multiclass', ignore_index=ignore_label)
+        self.ce_loss = CrossEntropy(ignore_label=ignore_label)
+
+    def forward(self, inputs, targets):
+        return self.dice_loss(inputs, targets) + self.ce_loss(inputs, targets)
+
+
 class DICE_BCE(base.Loss):
     def __init__(self, ignore_label=-1):
         super(DICE_BCE, self).__init__()
