@@ -350,7 +350,7 @@ class Runner:
         startt = time.time()
         for epoch in range(initial_epoch, epochs):
             # semi-supervised learning
-            if epoch >= 40:
+            if epoch >= 200:
                 self.pseudo(self.unlabeled_dataloader, epoch=epoch)
                 train_dataloader = self._generate_pseudo_dataloader(self.pseudo_dataset, self.pseudo_dataloader, self.distributed)
 

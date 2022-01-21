@@ -30,9 +30,8 @@ train_transform_1 = A.Compose([
 ])
 
 train_transform_2 = A.Compose([
-    A.RandomScale(scale_limit=0.3, p=0.5),
-    A.PadIfNeeded(512, 512, p=1),
-    A.RandomCrop(512, 512, p=1.),
+    # A.RandomScale(scale_limit=0.3, p=0.5),
+    A.RandomCrop(1024, 1024, p=1.),
     A.Flip(p=0.75),
 ])
 
@@ -44,7 +43,7 @@ train_transform_3 = A.Compose([
 
 train_transform_4 = A.Compose([
     # A.RandomScale(scale_limit=0.3, p=0.5),
-    A.RandomCrop(256, 256, p=1.),
+    A.RandomCrop(512, 512, p=1.),
     A.Flip(p=0.75),
 ])
 

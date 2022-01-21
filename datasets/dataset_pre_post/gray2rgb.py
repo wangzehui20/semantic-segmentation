@@ -2,7 +2,9 @@ import numpy as np
 import os
 import os.path as osp
 import cv2
+import pandas as pd
 from tqdm import tqdm
+from common import check_dir
 
 
 def graytorgb(img):
@@ -27,8 +29,7 @@ def graytorgb(img):
     return img_rgb
 
 
-def start(rootdir, dstdir):
-    names = os.listdir(rootdir)
+def start(rootdir, dstdir, names):
     for name in tqdm(names, total=len(names)):
         path = osp.join(rootdir, name)
         dstpath = osp.join(dstdir, name[:-4]+'.png')
@@ -38,7 +39,16 @@ def start(rootdir, dstdir):
 
 
 if __name__ == '__main__':
-    rootdir = r'/data/dataset/semi_compete/origin_integrate/labeled_train/mask'
-    dstdir = r'/data/dataset/semi_compete/origin_integrate/labeled_train/mask_rgb'
-    start(rootdir, dstdir)
+    # rootdir = r'/data/data/semi_compete/clip_integrate/1024_384/labeled_train/mask'
+    # dstdir = r'/data/data/semi_compete/clip_integrate/1024_384/labeled_train/val_mask_rgb'
+    # ids_csv = r'/data/data/semi_compete/clip_integrate/1024_384/labeled_train/val.csv'
+
+    # 512
+    rootdir = r'/data/data/semi_compete/clip_integrate/512_128/labeled_train/mask'
+    dstdir = r'/data/data/semi_compete/clip_integrate/512_128/labeled_train/val_mask_rgb'
+    ids_csv = r'/data/data/semi_compete/clip_integrate/512_128/labeled_train/val.csv'
+
+    check_dir(dstdir)
+    names = pd.read_csv(ids_csv)['name'].tolist() if ids_csv and osp.exists(ids_csv) else None
+    start(rootdir, dstdir, names)
     

@@ -48,6 +48,28 @@ def convert_label(label, inverse=False):
     return label
 
 
+def graytorgb(img):
+    label_mapping_rgb = {0: (34, 31, 32),
+                         1: (204, 102, 92),
+                         2: (209, 154, 98),
+                         3: (217, 208, 106),
+                         4: (182, 218, 106),
+                         5: (142, 217, 105),
+                         6: (140, 194, 130),
+                         7: (111, 175, 98),
+                         8: (219, 245, 215),
+                         9: (186, 255, 180),
+                         10: (55, 126, 34),
+                         11: (111, 174, 167),
+                         12: (145, 96, 38),
+                         13: (103, 153, 214),
+                         14: (41, 96, 246),
+                         15: (34, 31, 32),
+                         }
+    img_rgb = np.stack(np.vectorize(label_mapping_rgb.get)(img), axis=2).astype('uint8')
+    return img_rgb
+
+
 def _distributed_value(tensor):
     output_tensor = [torch.zeros_like(tensor) for _ in range(torch.distributed.get_world_size())]
     torch.distributed.all_gather(output_tensor, tensor)
@@ -62,47 +84,54 @@ def cal_binary_pred(pred):
 
 
 def metric_func(pred, gt):
-    func = IoU()
+    func = MeanIoU()
     value = func(pred, gt)
     value = torch.mean(_distributed_value(torch.Tensor([value]).cuda())).data.cpu().numpy()
     return value
 
 
 def predict(cfg, model, dataloader):
-    classes = 2
+    classes = 14
     model.eval()
     hist = np.zeros((classes, classes))
     values = []
-    for i, batch in enumerate(dataloader):
-        imgs = batch['image'].to(cfg.device)
-        names = batch['id']
-        pred = model(imgs)
-        if pred.shape[1] == 1:
-            pred = F.sigmoid(pred)
-            pred = cal_binary_pred(pred)
-        else:
-            pred = torch.argmax(F.softmax(pred, dim=1), dim=1)
-        # gt = batch['mask'].cuda()
+    with tqdm(total=len(dataloader), desc='test', disable=False, ncols=0) as pbar:
+        for i, batch in enumerate(dataloader):
+            imgs = batch['image'].to(cfg.device)
+            names = batch['id']
+            pred = model(imgs)
+            # gt = batch['mask'].cuda()
 
-        # if pred.shape != gt.shape:
-        #     pred = pred.squeeze(1)
+            # value = metric_func(pred, gt)
+            # values.append(value)
+            # if cfg.lrank == 0:
+            #     print('mean_iou: ', np.mean(values))
 
-        # hist += fast_hist(pred, gt, classes)
-        # f1, _, _ = cal_score(hist)
+            if pred.shape[1] == 1:
+                pred = F.sigmoid(pred)
+                pred = cal_binary_pred(pred)
+            else:
+                pred = torch.argmax(F.softmax(pred, dim=1), dim=1)
+            
 
-        # value = metric_func(pred, gt)
-        # values.append(value)
-        # if cfg.lrank == 0:
-        #     print(i + 1, '/', len(dataloader), ' iou: ', np.mean(values))
+            # if pred.shape != gt.shape:
+            #     pred = pred.squeeze(1)
 
-        for i, pre in enumerate(pred):
-            pre = pre.data.cpu().numpy().astype(np.uint8)
-            # pre = cv2.resize(pre, (1024,1024))   # resize to origin size
-            savepath = osp.join(cfg.outdir, names[i][:-4]+'.png')
-            cv2.imwrite(savepath, convert_label(pre, inverse=True))
+            # hist += fast_hist(pred, gt, classes)
+            # f1, _, _ = cal_score(hist)
 
-        # release memory of cuda
-        pred = None
+            for i, pre in enumerate(pred):
+                pre = pre.data.cpu().numpy().astype(np.uint8)
+                # pre = cv2.resize(pre, (1024,1024))   # resize to origin size
+                savepath = osp.join(cfg.outdir, names[i][:-4]+'.png')
+                cv2.imwrite(savepath, convert_label(pre, inverse=True))
+                # cv2.imwrite(savepath, graytorgb(convert_label(pre, inverse=True)))
+
+            # release memory of cuda
+            pred = None
+
+            if cfg.lrank == 0:
+                pbar.update()
 
 
 def model_from_config(cfg):

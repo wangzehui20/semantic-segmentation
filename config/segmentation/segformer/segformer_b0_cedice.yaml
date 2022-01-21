@@ -22,7 +22,7 @@ data:
     init_params:
       images_dir: /data/data/semi_compete/clip_integrate/512_128/labeled_train/image
       masks_dir: /data/data/semi_compete/clip_integrate/512_128/labeled_train/mask
-      ids_csv: /data/data/semi_compete/clip_integrate/512_128/labeled_train/trainpath.csv
+      ids_csv: /data/data/semi_compete/clip_integrate/512_128/labeled_train/train.csv
       transform_name: train_transform_1
 
   valid_dataset:
@@ -30,7 +30,7 @@ data:
     init_params:
       images_dir: /data/data/semi_compete/clip_integrate/512_128/labeled_train/image
       masks_dir: /data/data/semi_compete/clip_integrate/512_128/labeled_train/mask
-      ids_csv: /data/data/semi_compete/clip_integrate/512_128/labeled_train/valpath.csv
+      ids_csv: /data/data/semi_compete/clip_integrate/512_128/labeled_train/val.csv
       transform_name: test_transform_1
 
   test_dataset:
@@ -54,7 +54,7 @@ data:
       masks_dir: /data/data/semi_compete/clip_integrate/512_128/labeled_train/mask
       pse_images_dir: /data/data/semi_compete/clip_integrate/512_128/unlabeled_train/image
       pse_masks_dir: /data/data/semi_compete/clip_integrate/512_128/unlabeled_train/mask
-      ids_csv: /data/data/semi_compete/clip_integrate/512_128/labeled_train/trainpath.csv
+      ids_csv: /data/data/semi_compete/clip_integrate/512_128/labeled_train/train.csv
       transform_name: train_transform_1
 
   # loaders
