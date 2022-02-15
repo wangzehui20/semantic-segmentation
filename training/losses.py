@@ -1,13 +1,16 @@
 import torch
 import torch.nn as nn
 
+from training.smp_losses import dice
+
 from . import base
 from . import functional as F
 from . import _modules as modules
 from pytorch_msssim import ssim, ms_ssim, SSIM, MS_SSIM
-from .loss import lovasz_losses as L
-from .loss import flip_loss
+from .custom_losses import lovasz_losses as L
+from .custom_losses import flip_loss
 import training.smp_losses as smp_loss
+import training.custom_losses as custom_loss
 
 
 class ftnmt_loss(base.Loss):
@@ -507,50 +510,6 @@ class BCE_SCE_Contrast(base.Loss):
         return self.dice(inputs, targets)*0.45 + self.sce(inputs, targets)*0.45 + self.contrast(inputs, targets)*0.01
 
 
-class DICE_SCE(base.Loss):
-    def __init__(self, ignore_label=-1):
-        super(DICE_SCE, self).__init__()
-        self.ignore_index = ignore_label
-        self.dice = smp_loss.DiceLoss(mode='multiclass', ignore_index=ignore_label)
-        self.sce = smp_loss.SoftCrossEntropyLoss(smooth_factor=0.1, ignore_index=ignore_label)
-
-    def forward(self, inputs, targets):
-        return self.dice(inputs, targets)*0.5 + self.sce(inputs, targets)*0.5
-
-
-class FocalDiceLoss(base.Loss):
-    def __init__(self, ignore_label=-1):
-        super(FocalDiceLoss, self).__init__()
-        self.ignore_index = ignore_label
-        self.dice_loss = smp_loss.DiceLoss(mode='multiclass', ignore_index=ignore_label)
-        self.focal_loss = smp_loss.FocalLoss(mode='multiclass', ignore_index=ignore_label)
-
-    def forward(self, inputs, targets):
-        return self.dice_loss(inputs, targets) + self.focal_loss(inputs, targets)
-
-
-class CEDiceLoss(base.Loss):
-    def __init__(self, ignore_label=-1):
-        super(CEDiceLoss, self).__init__()
-        self.ignore_index = ignore_label
-        self.dice_loss = smp_loss.DiceLoss(mode='multiclass', ignore_index=ignore_label)
-        self.ce_loss = CrossEntropy(ignore_label=ignore_label)
-
-    def forward(self, inputs, targets):
-        return self.dice_loss(inputs, targets) + self.ce_loss(inputs, targets)
-
-
-class DICE_BCE(base.Loss):
-    def __init__(self, ignore_label=-1):
-        super(DICE_BCE, self).__init__()
-        self.ignore_index = ignore_label
-        self.dice = smp_loss.DiceLoss(mode='binary', ignore_index=ignore_label)
-        self.bce = smp_loss.SoftBCEWithLogitsLoss(ignore_index=ignore_label)
-
-    def forward(self, inputs, targets):
-        return self.dice(inputs, targets)*0.5 + self.bce(inputs, targets)*0.5
-
-
 class DICE_SCE_Contrast(base.Loss):
     def __init__(self, ignore_label=-1):
         super(DICE_SCE_Contrast, self).__init__()
@@ -723,70 +682,92 @@ class contrastive_loss(nn.Module):
         return loss
 
 
-#-----------------------------------------------------------------------------------------------------------------------
-#
-# custom loss
+# ---------------------------------------------------------------
+# custom
+#s
 
-class SegEdgeLoss(nn.Module):
-    def __init__(self, ignore_label=-1, is_train=True):
+class DICE_SCE(base.Loss):
+    def __init__(self, ignore_label=-1):
+        super(DICE_SCE, self).__init__()
+        self.ignore_index = ignore_label
+        self.dice = smp_loss.DiceLoss(mode='multiclass', ignore_index=ignore_label)
+        self.sce = smp_loss.SoftCrossEntropyLoss(smooth_factor=0.1, ignore_index=ignore_label)
+
+    def forward(self, inputs, targets):
+        return self.dice(inputs, targets)*0.5 + self.sce(inputs, targets)*0.5
+
+
+class FocalDiceLoss(base.Loss):
+    def __init__(self, ignore_label=-1):
+        super(FocalDiceLoss, self).__init__()
+        self.ignore_index = ignore_label
+        self.dice_loss = smp_loss.DiceLoss(mode='multiclass', ignore_index=ignore_label)
+        self.focal_loss = smp_loss.FocalLoss(mode='multiclass', ignore_index=ignore_label)
+
+    def forward(self, inputs, targets):
+        return self.dice_loss(inputs, targets) + self.focal_loss(inputs, targets)
+
+
+class CEDiceLoss(base.Loss):
+    def __init__(self, ignore_label=-1):
+        super(CEDiceLoss, self).__init__()
+        self.ignore_index = ignore_label
+        self.dice_loss = smp_loss.DiceLoss(mode='multiclass', ignore_index=ignore_label)
+        self.ce_loss = CrossEntropy(ignore_label=ignore_label)
+
+    def forward(self, inputs, targets):
+        return 3 * self.dice_loss(inputs, targets) + self.ce_loss(inputs, targets)
+
+
+class CEDiceFocalLoss(base.Loss):
+    def __init__(self, ignore_label=-1):
+        super(CEDiceLoss, self).__init__()
+        self.ignore_index = ignore_label
+        self.dice_loss = smp_loss.DiceLoss(mode='multiclass', ignore_index=ignore_label)
+        self.ce_loss = CrossEntropy(ignore_label=ignore_label)
+        self.focal_loss = smp_loss.FocalLoss(mode='multiclass', ignore_index=ignore_label)
+
+    def forward(self, inputs, targets):
+        return 3 * self.dice_loss(inputs, targets) + self.ce_loss(inputs, targets) + self.focal_loss(inputs, targets)
+
+
+class DICE_BCE(base.Loss):
+    def __init__(self, ignore_label=-1):
+        super(DICE_BCE, self).__init__()
+        self.ignore_index = ignore_label
+        self.dice = smp_loss.DiceLoss(mode='binary', ignore_index=ignore_label)
+        self.bce = smp_loss.SoftBCEWithLogitsLoss(ignore_index=ignore_label)
+
+    def forward(self, inputs, targets):
+        return self.dice(inputs, targets)*0.5 + self.bce(inputs, targets)*0.5
+
+
+class WeightCEDiceLoss(nn.Module):
+    """
+    Note that PyTorch optimizers minimize a loss. In this
+    case, we would like to maximize the dice loss so we
+    return the negated dice loss.
+    Args:
+        true: a tensor of shape [B, H, W].
+        logits: a tensor of shape [B, C, H, W]. Corresponds to
+            the raw output or logits of the model.
+        eps: added to the denominator for numerical stability.
+    Returns:
+        dice_loss: loss.
+    """
+
+    def __init__(self, ignore_label=-1, ce_weight=0.25, class_weights=[]):
         super().__init__()
-        self.ignore_label = ignore_label
-        self.isTrain = is_train
-        self.bce = nn.BCELoss()
+        self.ce_weight = ce_weight
+        self.class_weights = torch.tensor(class_weights, dtype=torch.float).cuda()
+        self.ce = CrossEntropy(ignore_label=ignore_label, weight=self.class_weights)
+        self.dice = custom_loss.DiceLoss(ignore_index=ignore_label, weight=self.class_weights)
 
-    def forward(self, pres, gts):
-        loss = self.bce(pres[0], gts[0])
-        if self.isTrain:
-            loss += self.bce(pres[1], gts[1])
-        return loss
-
-
-class ChangeLoss(nn.Module):
-    def __init__(self, is_train=True, is_label=0):
-        super().__init__()
-        self.is_train = is_train
-        self.is_label = is_label
-        self.bce = nn.BCELoss()
-
-    def forward(self, pres, gts):
-        [bpre_seg, bpre_edge, _], [apre_seg, apre_edge, _], chg = pres
-        [[bmask, bedge], [amask, aedge]] = gts
-        if self.is_train:
-            bloss = self.bce(bpre_seg, bmask) + self.bce(bpre_edge, bedge)
-            aloss = self.bce(apre_seg, amask) + self.bce(apre_edge, aedge)
-            # bmask_ = bmask.float().clone()
-            # bmask_[bmask_ == 0] = -1
-            # bmask_[bmask_ > 0] = 1
-            # bmask_ = bmask_ * 3
-            fseg = chg * apre_seg+ bmask * (1-chg)
-            aloss += self.bce(fseg, amask)
-            vloss = self.bce(apre_seg, (fseg>0).float())
-
-            floss = bloss + aloss*self.is_label + vloss*(1-self.is_label)
-        else:
-            bmask = bmask.float()
-            bmask[bmask == 0] = -1
-            bmask[bmask > 0] = 1
-            bmask = bmask * 3
-            fseg = chg * apre_seg + bmask * (1 - chg)
-            floss = self.bce(fseg, amask)
-
-        return floss
-
-
-class SoftLabelCrossEntropyLoss(nn.Module):
-    def __init__(self,
-                 reduction : str = 'mean'):
-        super().__init__()
-        self.reduction = reduction
-
-    def forward(self, pr, gt):
-        assert pr.shape == gt.shape
-        log_prob = torch.nn.functional.log_softmax(pr, dim=1)
-        b = pr.shape[0]
-        if self.reduction == 'mean':
-            loss = torch.sum(torch.mul(-log_prob, gt)) / b
-        elif self.reduction == 'sum':
-            loss = torch.sum(torch.mul(-log_prob, gt))
-        return loss
+    def forward(self, pred, gt):
+        classes = pred.shape[1]
+        ce_loss = self.ce(pred, gt)
+        if pred.shape != gt.shape:
+            gt = F.make_one_hot(gt.unsqueeze(dim=1), classes).to(pred.device)
+        dice_loss = self.dice(pred, gt)
+        return self.ce_weight * ce_loss + (1 - self.ce_weight) * dice_loss
 

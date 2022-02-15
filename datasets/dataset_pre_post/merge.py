@@ -40,7 +40,7 @@ if __name__ == '__main__':
     cfg = Config()
     windowc = WindowClip()
 
-    cfg.RES_BASEDIR = rf"{cfg.RES_DIR}/models/segformer/b0_cedice"
+    cfg.RES_BASEDIR = rf"{cfg.RES_DIR}/models_mmsegmentation/swintransformer_small_iter40000/"
     test_orimg_dir = rf"{cfg.ORI_DIR}/val/image"
     test_shiftul_path = rf"{cfg.CLIP_DIR}/512_128/val/test_shiftul.json"
     pred_dir = rf"{cfg.RES_BASEDIR}/pred"
@@ -51,11 +51,10 @@ if __name__ == '__main__':
     windowc.merge(test_orimg_dir, pred_dir, predmerge_dir, shift_ul, cfg)   # merge pred
 
 
-
     # rename pred_merge
     origindir = r'/data/dataset/semi_compete/origin/val'
     csp_dict = corresponding_dict(origindir)
-    submission_dir = r'/data/data/semi_compete/submission/b0_cedice'
+    submission_dir = r'/data/data/semi_compete/submission/swintransformer_small_iter40000'
     check_dir(submission_dir)
     rename_copy(predmerge_dir, submission_dir, csp_dict)
 

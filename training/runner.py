@@ -8,6 +8,7 @@ import torch
 import csv
 import shutil
 import torch.nn.functional as F
+import json
 from typing import Optional, Type
 import warnings
 import torch.distributed as dist
@@ -19,6 +20,7 @@ import numpy as np
 from .callbacks import CallbackList
 from torch.cuda.amp import autocast as autocast
 from .pseudo_dataset import PseudoDataset
+from .losses import WeightCEDiceLoss
 
 
 def graytorgb(img):
@@ -48,7 +50,6 @@ def convert_label(label, inverse=False):
         12: 10,
         13: 11,
         14: 12,
-        15: 13,
     }
     tmp = label.copy()
     if inverse:
@@ -59,6 +60,19 @@ def convert_label(label, inverse=False):
             label[tmp == k] = v
         label[label > len(label_mapping) - 1] = 0
     return label
+
+
+def load_json(path):
+    with open(path, 'r') as f:
+        data = json.load(f)
+    return data
+
+
+def update_class_weights(ids, data):
+    class_weights = list()
+    for id in ids:
+        class_weights.append(data[id])
+    return np.mean(class_weights, 0)
 
 
 def to_snake(name):
@@ -121,7 +135,7 @@ class Runner:
             distributed=False,
             unlabeled_dataloader=None,
             pseudo_dataset=None,
-            pseudo_dataloader=None
+            pseudo_dataloader=None,
     ):
 
         self.model = model
@@ -142,6 +156,8 @@ class Runner:
         self.unlabeled_dataloader = unlabeled_dataloader
         self.pseudo_dataset = pseudo_dataset
         self.pseudo_dataloader = pseudo_dataloader
+
+        self.class_weights_json = load_json('/data/data/semi_compete/clip_integrate/512_128/labeled_train/class_weights.json')
 
     def compile(
             self,
@@ -243,6 +259,14 @@ class Runner:
             os.makedirs(dir)
         dist.barrier()
 
+    def _reset_loss(self, class_weights):
+        init_params = {
+            'ignore_label': 0
+        }
+        init_params['class_weights'] = class_weights
+        criterion = WeightCEDiceLoss(**init_params)
+        return criterion
+
     @timeit
     def _feed_batch(self, batch) -> Mapping[str, torch.Tensor]:
         input = self._prepare_input(batch)
@@ -258,9 +282,12 @@ class Runner:
     ) -> Mapping[str, torch.Tensor]:
 
         losses_dict = {}
+        class_weights = update_class_weights(target['id'], self.class_weights_json)
 
         # compute loss for each output
         for output_name, criterion in self.loss.items():
+            criterion = self._reset_loss(class_weights)
+
             loss_name = 'loss_{}'.format(output_name)
             # compute auxiliary_head loss
             if 'aux' in output_name:
@@ -352,7 +379,8 @@ class Runner:
             # semi-supervised learning
             if epoch >= 200:
                 self.pseudo(self.unlabeled_dataloader, epoch=epoch)
-                train_dataloader = self._generate_pseudo_dataloader(self.pseudo_dataset, self.pseudo_dataloader, self.distributed)
+                train_dataloader = self._generate_pseudo_dataloader(self.pseudo_dataset, self.pseudo_dataloader,
+                                                                    self.distributed)
 
             if self.train_sampler is not None:  # 必须设置随机数种子，不然不会随机
                 self.train_sampler.set_epoch(epoch)
@@ -550,10 +578,10 @@ class Runner:
                 output = self._feed_batch(batch)
 
             for output_name, output_value in output.items():
-                if output_value.shape[1]==1:
+                if output_value.shape[1] == 1:
                     label = F.sigmoid(output_value)
                     soft_label = label.data.cpu().numpy().squeeze(1)
-                    hard_label = (label>0.5).data.cpu().numpy().squeeze(1).astype(np.uint8)
+                    hard_label = (label > 0.5).data.cpu().numpy().squeeze(1).astype(np.uint8)
                 else:
                     # multi class
                     label = F.softmax(output_value, dim=1)
@@ -561,21 +589,21 @@ class Runner:
                     hard_label = torch.argmax(label, dim=1).data.cpu().numpy().astype(np.uint8)
 
                 for i, name in enumerate(batch['id']):
-                    if np.all(hard_label[i]==0):
+                    if np.all(hard_label[i] == 0):
                         name = 'delete_' + name
 
-                    pseudo_label_path = osp.join(self.pseudo_dataset.pse_masks_dir, name[:-4]+'.npy')
+                    pseudo_label_path = osp.join(self.pseudo_dataset.pse_masks_dir, name[:-4] + '.npy')
                     np.save(pseudo_label_path, soft_label[i])
 
                     # hard label
                     pseudo_dir = osp.dirname(self.pseudo_dataset.pse_masks_dir)
                     cur_pseudo_dir = osp.join(pseudo_dir, 'pseudo_{}'.format(epoch))
                     self._check_dir(cur_pseudo_dir)
-                    cur_pseudo_path = osp.join(cur_pseudo_dir, name[:-4]+'.png')
+                    cur_pseudo_path = osp.join(cur_pseudo_dir, name[:-4] + '.png')
                     tmp_label = hard_label[i]
 
-                    if len(soft_label.shape)==3:
-                        tmp_label[tmp_label==1] = 255
+                    if len(soft_label.shape) == 3:
+                        tmp_label[tmp_label == 1] = 255
                         cv2.imwrite(cur_pseudo_path, tmp_label)
                     else:
                         cv2.imwrite(cur_pseudo_path, convert_label(tmp_label, inverse=True))

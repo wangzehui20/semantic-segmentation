@@ -34,7 +34,6 @@ def convert_label(label, inverse=False):
         12: 10,
         13: 11,
         14: 12,
-        15: 13,
     }
 
     tmp = label.copy()
@@ -91,7 +90,7 @@ def metric_func(pred, gt):
 
 
 def predict(cfg, model, dataloader):
-    classes = 14
+    classes = 13
     model.eval()
     hist = np.zeros((classes, classes))
     values = []

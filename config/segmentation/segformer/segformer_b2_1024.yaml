@@ -1,4 +1,4 @@
-logdir: /data/data/semi_compete/models/segformer/b0_1024/
+logdir: /data/data/semi_compete/models/segformer/b2_1024/
 gpus: [0]
 distributed: true
 fp16: false
@@ -6,9 +6,10 @@ lrank: 0
 
 # define model
 model:
-  architecture: segformer_b0
+  architecture: segformer_b2
   model_scale: 1
-  preweightpath: /data/data
+  pretrained: /data/initmodel/mmsegmentation/segformer_mit-b2_512x512_160k_ade20k_20210726_112103-cbd414ac.pth
+  preweightpath: /data/
   init_params:
     in_channels: 3
     classes: 14
@@ -36,10 +37,7 @@ data:
   test_dataset:
     name: SegDataset
     init_params:
-      # images_dir: /data/data/semi_compete/clip_integrate/1024_384/val/image
-      images_dir: /data/data/semi_compete/clip_integrate/1024_384/labeled_train/image
-      masks_dir: /data/data/semi_compete/clip_integrate/1024_384/labeled_train/mask
-      ids_csv: /data/data/semi_compete/clip_integrate/1024_384/labeled_train/val.csv
+      images_dir: /data/data/semi_compete/clip_integrate/1024_384/val/image
       transform_name: test_transform_1
 
   unlabeled_dataset:
@@ -61,34 +59,34 @@ data:
 
   # loaders
   train_dataloader:
-    batch_size: 2
+    batch_size: 1
     drop_last: true
     pin_memory: true
     num_workers: 0
 
   valid_dataloader:
-    batch_size: 2
+    batch_size: 1
     shuffle: false
     drop_last: false
     pin_memory: true
     num_workers: 0
 
   test_dataloader:
-    batch_size: 2
+    batch_size: 1
     shuffle: false
     drop_last: false
     pin_memory: false
     num_workers: 0
   
   unlabeled_dataloader:
-    batch_size: 2
+    batch_size: 1
     shuffle: false
     drop_last: false
     pin_memory: true
     num_workers: 0
 
   pseudo_dataloader:
-    batch_size: 2
+    batch_size: 1
     drop_last: true
     pin_memory: true
     num_workers: 0
@@ -113,10 +111,10 @@ training:
   scheduler:
     name: WarmupPolyLR
     init_params:
-      epochs: 120
+      epochs: 60
 
   fit:
-    epochs: 80
+    epochs: 40
     accumulation_steps: 4
     verbose: true
 
@@ -127,4 +125,4 @@ training:
 
 
 logging:
-  save_top: 20
+  save_top: 10

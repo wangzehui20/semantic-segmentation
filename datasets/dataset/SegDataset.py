@@ -48,7 +48,7 @@ class SegDataset(Dataset):
         self.images_dir = images_dir
         self.masks_dir = masks_dir
         self.mask_onehot = mask_onehot
-        self.classes = 14
+        self.classes = 13
         self.transform = transforms.__dict__[transform_name] if transform_name else None
         self.tfms = pytorchtrans.Compose([pytorchtrans.ToTensor()])
         ignore_label = -1
@@ -68,7 +68,7 @@ class SegDataset(Dataset):
             12: 10,
             13: 11,
             14: 12,
-            15: 13,
+            15: 0,
         }
 
     def _get_ids(self, ids_csv):

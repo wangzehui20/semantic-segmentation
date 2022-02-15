@@ -253,7 +253,7 @@ def main(cfg):
         **cfg.training.runner,
         unlabeled_dataloader=unlabeled_dataloader,
         pseudo_dataset=cfg.data.pseudo_dataset.init_params,
-        pseudo_dataloader=cfg.data.pseudo_dataloader
+        pseudo_dataloader=cfg.data.pseudo_dataloader,
     )
 
     runner.compile(

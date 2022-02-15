@@ -40,7 +40,7 @@ class IoU(base.Metric):
 class MeanIoU(base.Metric):
     __name__ = "mean_iou"
 
-    def __init__(self, ignore_label=0):
+    def __init__(self, ignore_label=-1):
         super().__init__()
         self.eps = 1e-5
         self.intersection = {}

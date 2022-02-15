@@ -1,4 +1,4 @@
-logdir: /data/data/semi_compete/models/swinTransform/upernet_swin-s/
+logdir: /data/data/semi_compete/models/swinTransform/upernet_swin-s_weightcediceloss/
 gpus: [0]
 distributed: true
 fp16: false
@@ -97,7 +97,7 @@ training:
 
   losses:
     mask:
-      name: CEDiceLoss
+      name: WeightCEDiceLoss
       init_params:
         ignore_label: 0
 

@@ -1,4 +1,4 @@
-logdir: /data/data/semi_compete/models/swinTransform/upernet_swin-s/
+logdir: /data/data/semi_compete/models/swinTransform/upernet_swin-s_resume40/
 gpus: [0]
 distributed: true
 fp16: false
@@ -8,9 +8,9 @@ lrank: 0
 model:
   architecture: upernet_swin-s
   model_scale: 1
-  preweightpath: /data/data
+  preweightpath: /data/data/semi_compete/models/swinTransform/upernet_swin-s/checkpoints/k-ep[79]-0.7133.pth
   init_params:
-    pretrained: /data/initmodel/mmsegmentation/swin_small_patch4_window7_224_convert.pth
+    # pretrained: /data/initmodel/mmsegmentation/swin_small_patch4_window7_224_convert.pth
     in_channels: 3
     classes: 13
     with_auxiliary_head: false
@@ -110,15 +110,15 @@ training:
   optimizer:
     name: adamw
     init_params:
-      lr: 0.00005
+      lr: 0.000019
 
   scheduler:
-    name: WarmupPolyLR
+    name: PolyLR
     init_params:
       epochs: 120
 
   fit:
-    epochs: 80
+    epochs: 40
     accumulation_steps: 4
     verbose: true
 
@@ -129,4 +129,4 @@ training:
 
 
 logging:
-  save_top: 20
+  save_top: 10

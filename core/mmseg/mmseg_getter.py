@@ -36,7 +36,7 @@ class Segmodel(nn.Module):
             in_channels: int = 3,
             classes: int = 1,
             ispretrain: bool = True,
-            pretrain_path="",
+            pretrained="",
             activation=None,
             with_auxiliary_head: bool = False
     ):
@@ -45,10 +45,10 @@ class Segmodel(nn.Module):
 
         cfg = MMConfig.fromfile(config_get[architecture]["config_path"])
         cfg.model.backbone.in_channels = in_channels
-        if ispretrain == False:
+        if not ispretrain:
             cfg.model.pretrained = None
-        elif osp.exists(pretrain_path):
-            cfg.model.pretrained = pretrain_path
+        if ispretrain and osp.exists(pretrained):
+            cfg.model.pretrained = pretrained
         # multi decode head
         if isinstance(cfg.model.decode_head, list):
             for index in range(len(cfg.model.decode_head)):
@@ -102,6 +102,9 @@ config_get = {
     },
     "segformer_b0": {
         "config_path": "/data/code/semantic-segmentation-semi-supervised-learning/core/mmseg/config/segformer_mit-b0.py"
+    },
+    "segformer_b2": {
+        "config_path": "/data/code/semantic-segmentation-semi-supervised-learning/core/mmseg/config/segformer_mit-b2.py"
     },
     "segformer_b3": {
         "config_path": "core/mmseg/config/segformer_mit-b3.py"

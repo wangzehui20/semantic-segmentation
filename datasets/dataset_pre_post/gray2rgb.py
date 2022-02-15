@@ -31,7 +31,7 @@ def graytorgb(img):
 
 def start(rootdir, dstdir, names):
     for name in tqdm(names, total=len(names)):
-        path = osp.join(rootdir, name)
+        path = osp.join(rootdir, name[:-4]+'.png')
         dstpath = osp.join(dstdir, name[:-4]+'.png')
         img = cv2.imread(path, 0)
         img_rgb = graytorgb(img)
@@ -44,8 +44,14 @@ if __name__ == '__main__':
     # ids_csv = r'/data/data/semi_compete/clip_integrate/1024_384/labeled_train/val.csv'
 
     # 512
-    rootdir = r'/data/data/semi_compete/clip_integrate/512_128/labeled_train/mask'
-    dstdir = r'/data/data/semi_compete/clip_integrate/512_128/labeled_train/val_mask_rgb'
+    # rootdir = r'/data/data/semi_compete/clip_integrate/512_128/labeled_train/mask'
+    # dstdir = r'/data/data/semi_compete/clip_integrate/512_128/labeled_train/val_mask_rgb'
+    # ids_csv = r'/data/data/semi_compete/clip_integrate/512_128/labeled_train/val.csv'
+
+# -----------------
+    # pred
+    rootdir = r'/data/data/semi_compete/models/ocrnet/hr18/pred_val'
+    dstdir = r'/data/data/semi_compete/models/ocrnet/hr18/pred_val_rgb'
     ids_csv = r'/data/data/semi_compete/clip_integrate/512_128/labeled_train/val.csv'
 
     check_dir(dstdir)
