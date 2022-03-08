@@ -26,7 +26,7 @@ def startest(imori_dir, imdst_dir, cfg, maskori_dir=None, maskdst_dir=None):
 if __name__ == '__main__':
     cfg = Config()
 
-    imori_dir = rf"{cfg.ORI_DIR}/unlabeled_train/image"
+    imori_dir = rf"{cfg.ORI_DIR}/2012/image"
     imclp_dir = rf"{cfg.CLIP_DIR}/{cfg.FILE_NAME}/unlabeled_train/image"
     statis_path = rf"{cfg.CLIP_DIR}/{cfg.FILE_NAME}/unlabeled_train/test_statis.json"
     shiftul_path = rf"{cfg.CLIP_DIR}/{cfg.FILE_NAME}/unlabeled_train/test_shiftul.json"

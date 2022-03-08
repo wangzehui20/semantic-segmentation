@@ -6,9 +6,9 @@ from training.smp_losses import dice
 from . import base
 from . import functional as F
 from . import _modules as modules
-from pytorch_msssim import ssim, ms_ssim, SSIM, MS_SSIM
-from .custom_losses import lovasz_losses as L
-from .custom_losses import flip_loss
+# from pytorch_msssim import ssim, ms_ssim, SSIM, MS_SSIM
+# from .losses import lovasz_losses as L
+# from .losses import flip_loss
 import training.smp_losses as smp_loss
 import training.custom_losses as custom_loss
 
@@ -294,34 +294,34 @@ class BBCELoss(base.Loss):
         return loss
 
 
-class Lovaszsigmoid(base.Loss):
-    def __init__(self, reduction='mean', ignore_label=255):
-        super().__init__()
-        assert reduction in ['mean', None, False]
-        self.reduction = reduction
-        self.ignore_label = ignore_label
+# class Lovaszsigmoid(base.Loss):
+#     def __init__(self, reduction='mean', ignore_label=255):
+#         super().__init__()
+#         assert reduction in ['mean', None, False]
+#         self.reduction = reduction
+#         self.ignore_label = ignore_label
 
-    def forward(self, pr, gt):
-        # Lovasz need sigmoid input
-        # out = torch.sigmoid(pr)
-        loss = L.lovasz_softmax(pr, gt, classes=[1], ignore=self.ignore_label)
-        if self.reduction == 'mean':
-            loss = loss.mean()
-        return loss
+#     def forward(self, pr, gt):
+#         # Lovasz need sigmoid input
+#         # out = torch.sigmoid(pr)
+#         loss = L.lovasz_softmax(pr, gt, classes=[1], ignore=self.ignore_label)
+#         if self.reduction == 'mean':
+#             loss = loss.mean()
+#         return loss
 
 
 #-----------------------------------------------------------------------------------------------------------------------
 #
 #
 
-class Lovaszsoftmax(nn.Module):
-    def __init__(self, ignore_label=0):
-        super(Lovaszsoftmax, self).__init__()
-        self.ignore_label = ignore_label
+# class Lovaszsoftmax(nn.Module):
+#     def __init__(self, ignore_label=0):
+#         super(Lovaszsoftmax, self).__init__()
+#         self.ignore_label = ignore_label
 
-    def forward(self, pre, gt):
-        pre = torch.nn.functional.softmax(pre, dim=1)
-        return L.lovasz_softmax(pre, gt, ignore=self.ignore_label)
+#     def forward(self, pre, gt):
+#         pre = torch.nn.functional.softmax(pre, dim=1)
+#         return L.lovasz_softmax(pre, gt, ignore=self.ignore_label)
 
 
 class CrossEntropy(base.Loss):
@@ -604,23 +604,23 @@ class Changeloss_self(nn.Module):
         return self.loss_fn(pre1, pre2) + (1 - self.loss_dff(pre1_diff, pre2_diff))
 
 
-class Changelosswd(nn.Module):
-    def __init__(self):
-        super(Changelosswd, self).__init__()
-        self.ssim_loss = SSIM(win_size=11, win_sigma=1.5, data_range=1, size_average=True, channel=7)
-        # self.WDLoss = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
-        # self.loss_fn = torch.nn.MSELoss(reduce=True, size_average=True)
-
-    def forward(self, pre, gt):
-        channel = int(pre.shape[1] / 2)
-
-        gt_small = 1 - gt
-
-        pre1 = pre[:, :channel] * gt_small
-        pre2 = pre[:, channel:] * gt_small
-        p_output = torch.nn.functional.softmax(pre1, dim=1)
-        q_output = torch.nn.functional.softmax(pre2, dim=1)
-        return 1- self.ssim_loss(p_output, q_output)
+# class Changelosswd(nn.Module):
+#     def __init__(self):
+#         super(Changelosswd, self).__init__()
+#         self.ssim_loss = SSIM(win_size=11, win_sigma=1.5, data_range=1, size_average=True, channel=7)
+#         # self.WDLoss = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
+#         # self.loss_fn = torch.nn.MSELoss(reduce=True, size_average=True)
+#
+#     def forward(self, pre, gt):
+#         channel = int(pre.shape[1] / 2)
+#
+#         gt_small = 1 - gt
+#
+#         pre1 = pre[:, :channel] * gt_small
+#         pre2 = pre[:, channel:] * gt_small
+#         p_output = torch.nn.functional.softmax(pre1, dim=1)
+#         q_output = torch.nn.functional.softmax(pre2, dim=1)
+#         return 1- self.ssim_loss(p_output, q_output)
 
 
 class Changelossflip(nn.Module):

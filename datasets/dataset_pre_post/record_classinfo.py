@@ -104,15 +104,15 @@ if __name__ == '__main__':
     # pixel ratio of one label
 
     log_path = r'/data/data/semi_compete/clip_integrate/512_128/labeled_train/pixelratio/train.csv'
-    label_logpath = r'/data/data/semi_compete/clip_integrate/512_128/labeled_train/label_top/13.csv'
-    label = 13
+    label_logpath = r'/data/data/semi_compete/clip_integrate/512_128/labeled_train/label_top/6_name.csv'
+    label = 6
     c = Csv()
     c.readcsv(log_path)
     print(c.content.keys())
     for l, n in sorted(zip(c.content[str(label)], c.content['name']), key=lambda pair: pair[0], reverse=True):
         data = dict()
         data['name'] = n
-        data[label] = l
+        # data[label] = l
         c.writecsv(label_logpath, data)
         
 

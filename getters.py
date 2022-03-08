@@ -10,11 +10,11 @@ from torch.optim.lr_scheduler import CosineAnnealingWarmRestarts
 
 def get_model(architecture, init_params):
     init_params = init_params or {}
-    # is it in mmseg
-    if mmseg_contain(architecture):
-        return get_mmseg_model(architecture, **init_params)
-    elif mymodel_contain(architecture):
+    if mymodel_contain(architecture):
         return get_mymodel(architecture, **init_params)
+    # is it in mmseg
+    elif mmseg_contain(architecture):
+        return get_mmseg_model(architecture, **init_params)
     else:
         print(architecture)
         model_class = smp.__dict__[architecture]

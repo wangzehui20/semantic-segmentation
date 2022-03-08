@@ -1,4 +1,5 @@
 import os.path as osp
+from cv2 import imwrite
 import numpy as np
 import math
 import cv2
@@ -51,22 +52,23 @@ def data_process(imori_path, imdst_dir, cfg, maskori_dir=None, maskdst_dir=None,
             maskname = imori_path.split('/')[-1]
 
         # (1) 存储裁剪的训练图片
-        imdst_path = osp.join(imdst_dir, "{}_{}.tif".format(imname[:-4], start))
+        imdst_path = osp.join(imdst_dir, "{}_{}.png".format(imname[:-4], start))
         imdata = imori_info.dt.ReadAsArray(x_min, y_min, im_w, im_h)  # 获取分块数据
         if im_w != cfg.WIDTH or im_h != cfg.HEIGHT:
             imdata_pad = np.zeros((imori_info.b, cfg.HEIGHT, cfg.WIDTH)).astype(typeTf.gdal2np(imori_info.t))
             imdata_pad[:, :im_h, :im_w] = imdata[:, :im_h, :im_w]
             imdata = imdata_pad
-        
-        # RGB
-        # img_data = img_data[:3,:,:]
 
         # 背景像素过多则删掉该图片
-        if mode == 'train' and maskori_dir and is_lowimg(imdata):
-            continue
-        imdata = typeTf.uint16Touint8(imdata)
+        # if mode == 'train' and maskori_dir and is_lowimg(imdata):
+        #     continue
+
+        # 16位转8位
+        # imdata = typeTf.uint16Touint8(imdata)
+
         # 保存为带坐标的.tif
-        save_tif(imori_path, imdata, imdst_path, corner_geo[0])
+        # save_tif(imori_path, imdata, imdst_path, corner_geo[0])   #.tif
+        cv2.imwrite(imdst_path, imdata.transpose(1,2,0)[:,:,::-1])    #.png
 
         # test_gt, need to save all images
         if mode == 'test' and maskname is None:
@@ -74,8 +76,9 @@ def data_process(imori_path, imdst_dir, cfg, maskori_dir=None, maskdst_dir=None,
 
         # (2) 存储裁剪的真值图片
         if maskori_dir:
-            maskdst_path = osp.join(maskdst_dir, "{}_{}.tif".format(imname[:-4], start))
-            maskori_path = osp.join(maskori_dir, imname[:-4]+'_UA2012.tif')
+
+            maskdst_path = osp.join(maskdst_dir, "{}_{}.png".format(imname[:-4], start))
+            maskori_path = osp.join(maskori_dir, imname)
             maskori_info = TifInfo(maskori_path)
             maskori_coordT = CoordinateTransform(maskori_info.dt)
             # label proj
@@ -113,11 +116,6 @@ def data_process(imori_path, imdst_dir, cfg, maskori_dir=None, maskdst_dir=None,
             else:
                 maskdata = maskori_info.dt.ReadAsArray(maskcorner_xy[0][0], maskcorner_xy[0][1], valid_w, valid_h)
 
-            # if label_data is None:
-            #     os.remove(dst_img_path)
-            #     print("ori_img: ", osp.basename(ori_img_path), "label_data is None", "xy is: ", label_ul_xy, "valid_width: ", valid_width, "valid_height", valid_height)
-            #     continue
-
             # 单波段则增加band维度
             if len(maskdata.shape) == 2:
                 maskdata = maskdata[np.newaxis, :, :]
@@ -128,22 +126,16 @@ def data_process(imori_path, imdst_dir, cfg, maskori_dir=None, maskdst_dir=None,
                 maskdata = maskdata_pad
 
             # 若真值背景像素过多则移除之前保存的训练图像
-            if maskdst_dir and is_lowimg(maskdata):
-                os.remove(imdst_path)
-                continue
-            
-            # .png
-            # if label_data.shape[0] == 1:
-            #     label_data = label_data.squeeze(0)
-            # elif label_data.shape[0] > 3:
-            #     label_data = label_data[:3,:,:]
-            # cv2.imwrite(dst_label_path, np.transpose(label_data, (1,2,0)))
+            # if maskdst_dir and is_lowimg(maskdata):
+            #     os.remove(imdst_path)
+            #     continue
 
             # remove image background but has label
             maskdata = mask_imgbg(imdata, maskdata)
 
             # 将裁剪的真值数据保存到裁剪的训练图片坐标系中
-            save_tif(imori_path, maskdata, maskdst_path, corner_geo[0])
+            # save_tif(imori_path, maskdata, maskdst_path, corner_geo[0])   #.tif
+            cv2.imwrite(maskdst_path, convert_label(maskdata.squeeze(), inverse=True))  # .png
 
             if lock:
                 lock.release()
@@ -163,6 +155,22 @@ class TifInfo():
         self.t = gdal.GetDataTypeName(self.dt.GetRasterBand(1).DataType)
         self.tf = self.dt.GetGeoTransform()
         self.pj = self.dt.GetProjection()
+
+
+def convert_label(label, inverse=False):
+    label_mapping = {
+        0: 0,
+        255: 1
+    }
+    tmp = label.copy()
+    if inverse:
+        for v, k in label_mapping.items():
+            label[tmp == k] = v
+    else:
+        for k, v in label_mapping.items():
+            label[tmp == k] = v
+        label[label > len(label_mapping) - 1] = 0
+    return label
 
 
 def data_process_multi(inputs):

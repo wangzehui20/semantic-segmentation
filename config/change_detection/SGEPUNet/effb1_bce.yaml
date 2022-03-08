@@ -1,0 +1,107 @@
+logdir: /data/data/change_detection_whole/2012/models/SGEPUNet/effb1_bce/
+gpus: [0]
+distributed: true
+fp16: false
+lrank: 0
+
+# define model
+model:
+  architecture: SGEPUnet
+  model_scale: 1
+  preweightpath: /data/data
+  init_params:
+    pretrainpath: /data/data/change_detection_whole/2012/models/EPUNet/effb1_bce/checkpoints/best.pth
+
+tta: False
+
+data:
+
+  tv_path: /data/data/change_detection_whole/2012/256_128/train/train.csv
+  # datasets
+  train_dataset:
+    name: ChangeDataset_input2
+    init_params:
+      images1_dir: /data/data/change_detection_whole/2012/256_128/train/image
+      images2_dir: /data/data/change_detection_whole/2016/256_128/train/image
+      masks1_dir: /data/data/change_detection_whole/2012/256_128/train/mask
+      masks2_dir: /data/data/change_detection_whole/2016/256_128/train/mask
+      edge1_dir: /data/data/change_detection_whole/2012/256_128/train/edge
+      edge2_dir: /data/data/change_detection_whole/2016/256_128/train/edge
+      transform_name: train_transform_1
+
+  valid_dataset:
+    name: ChangeDataset_input2
+    init_params:
+      images1_dir: /data/data/change_detection_whole/2012/256_128/test/image
+      images2_dir: /data/data/change_detection_whole/2016/256_128/test/image
+      masks1_dir: /data/data/change_detection_whole/2012/256_128/test/mask
+      masks2_dir: /data/data/change_detection_whole/2016/256_128/test/mask
+      edge1_dir: /data/data/change_detection_whole/2012/256_128/test/edge
+      edge2_dir: /data/data/change_detection_whole/2016/256_128/test/edge
+      transform_name: test_transform_1
+
+  test_dataset:
+    name: ChangeDataset_input2
+    init_params:
+      images1_dir: /data/data/change_detection_whole/2012/256_128/test/image
+      images2_dir: /data/data/change_detection_whole/2016/256_128/test/image
+      masks1_dir: /data/data/change_detection_whole/2012/256_128/test/mask
+      masks2_dir: /data/data/change_detection_whole/2016/256_128/test/mask
+      edge1_dir: /data/data/change_detection_whole/2012/256_128/test/edge
+      edge2_dir: /data/data/change_detection_whole/2016/256_128/test/edge
+      transform_name: test_transform_1
+
+  # loaders
+  train_dataloader:
+    batch_size: 1
+    drop_last: true
+    pin_memory: true
+    num_workers: 0
+
+  valid_dataloader:
+    batch_size: 1
+    shuffle: false
+    drop_last: false
+    pin_memory: true
+    num_workers: 0
+
+  test_dataloader:
+    batch_size: 1
+    shuffle: false
+    drop_last: false
+    pin_memory: false
+    num_workers: 0
+
+training:
+
+  losses:
+    mask:
+      name: ChangeLoss
+      init_params:
+#        reduce: False
+
+  metrics:
+    mask:
+      - name: ChangeIoU
+        init_params:
+
+  optimizer:
+    name: adamw
+    init_params:
+      lr: 0.001
+
+  scheduler:
+    name: WarmupPolyLR
+    init_params:
+      epochs: 60
+
+  fit:
+    epochs: 40
+    accumulation_steps: 1
+    verbose: true
+
+  callbacks: []
+
+
+logging:
+  save_top: 10

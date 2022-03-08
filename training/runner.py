@@ -156,8 +156,9 @@ class Runner:
         self.unlabeled_dataloader = unlabeled_dataloader
         self.pseudo_dataset = pseudo_dataset
         self.pseudo_dataloader = pseudo_dataloader
+        self.training = True
 
-        self.class_weights_json = load_json('/data/data/semi_compete/clip_integrate/512_128/labeled_train/class_weights.json')
+        # self.class_weights_json = load_json('/data/data/semi_compete/clip_integrate/512_128/labeled_train/class_weights.json')
 
     def compile(
             self,
@@ -185,8 +186,10 @@ class Runner:
     def _model_to_mode(self, mode='train'):
         if mode == 'train' and hasattr(self.model, 'train'):
             self.model.train()
+            self.training = True
         elif mode == 'eval' and hasattr(self.model, 'eval'):
             self.model.eval()
+            self.training = False
         else:
             warnings.warn(
                 "Model does not support train/eval modes, are you using traced module?",
@@ -282,11 +285,11 @@ class Runner:
     ) -> Mapping[str, torch.Tensor]:
 
         losses_dict = {}
-        class_weights = update_class_weights(target['id'], self.class_weights_json)
+        # class_weights = update_class_weights(target['id'], self.class_weights_json)
 
         # compute loss for each output
         for output_name, criterion in self.loss.items():
-            criterion = self._reset_loss(class_weights)
+            # criterion = self._reset_loss(class_weights)
 
             loss_name = 'loss_{}'.format(output_name)
             # compute auxiliary_head loss
@@ -309,6 +312,7 @@ class Runner:
     ) -> Mapping[str, torch.Tensor]:
         metrics_dict = {}
         for output_name, metrics in self.metrics.items():
+            # if not self.training and output_name != 'mask': continue
             for i, metric in enumerate(metrics):
                 metric_name = '{output_name}_{metric_name}'.format(
                     output_name=output_name,
@@ -509,11 +513,11 @@ class Runner:
             metrics = self._compute_metrics(output, batch) if self.metrics is not None else {}
 
             # calculate loss and metrics on all gpus
-            if torch.distributed.get_world_size() > 1:
-                for keys, values in losses.items():
-                    losses[keys] = self._distributed_value(torch.Tensor([values]).cuda())
-                for keys, values in metrics.items():
-                    metrics[keys] = self._distributed_value(torch.Tensor([values]).cuda())
+            # if torch.distributed.get_world_size() > 1:
+            #     for keys, values in losses.items():
+            #         losses[keys] = self._distributed_value(torch.Tensor([values]).cuda())
+            #     for keys, values in metrics.items():
+            #         metrics[keys] = self._distributed_value(torch.Tensor([values]).cuda())
             meter.update(**losses, **metrics)
 
             # if os.path.exists(logdir):

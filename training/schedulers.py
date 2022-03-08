@@ -20,8 +20,8 @@ class ReduceLROnPlateauPatch(ReduceLROnPlateau, _LRScheduler):
 
 
 class WarmupPolyLR(torch.optim.lr_scheduler._LRScheduler):
-    def __init__(self, optimizer, epochs, target_lr=0, power=0.9, warmup_factor=1.0 / 5,
-                 warmup_epoch=5, warmup_method='linear', last_epoch=-1):
+    def __init__(self, optimizer, epochs, target_lr=0, power=0.9, warmup_factor=1.0 / 3,
+                 warmup_epoch=3, warmup_method='linear', last_epoch=-1):
         if warmup_method not in ("constant", "linear"):
             raise ValueError(
                 "Only 'constant' or 'linear' warmup_method accepted "

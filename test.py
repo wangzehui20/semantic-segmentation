@@ -22,18 +22,7 @@ from tqdm import tqdm
 def convert_label(label, inverse=False):
     label_mapping = {
         0: 0,
-        1: 1,
-        2: 2,
-        3: 3,
-        4: 4,
-        5: 5,
-        6: 6,
-        7: 7,
-        10: 8,
-        11: 9,
-        12: 10,
-        13: 11,
-        14: 12,
+        255: 1,
     }
 
     tmp = label.copy()
@@ -83,34 +72,34 @@ def cal_binary_pred(pred):
 
 
 def metric_func(pred, gt):
-    func = MeanIoU()
+    func = IoU(activation='sigmoid')
     value = func(pred, gt)
     value = torch.mean(_distributed_value(torch.Tensor([value]).cuda())).data.cpu().numpy()
     return value
 
 
 def predict(cfg, model, dataloader):
-    classes = 13
+    # classes = 2
     model.eval()
-    hist = np.zeros((classes, classes))
+    # hist = np.zeros((classes, classes))
     values = []
     with tqdm(total=len(dataloader), desc='test', disable=False, ncols=0) as pbar:
         for i, batch in enumerate(dataloader):
             imgs = batch['image'].to(cfg.device)
             names = batch['id']
             pred = model(imgs)
-            # gt = batch['mask'].cuda()
+            gt = batch['mask'].cuda()
 
-            # value = metric_func(pred, gt)
-            # values.append(value)
-            # if cfg.lrank == 0:
-            #     print('mean_iou: ', np.mean(values))
+            value = metric_func(pred, gt)
+            values.append(value)
+            if cfg.lrank == 0:
+                print('mean_iou: ', np.mean(values))
 
-            if pred.shape[1] == 1:
-                pred = F.sigmoid(pred)
-                pred = cal_binary_pred(pred)
-            else:
-                pred = torch.argmax(F.softmax(pred, dim=1), dim=1)
+            # if pred.shape[1] == 1:
+            #     pred = F.sigmoid(pred)
+            #     pred = cal_binary_pred(pred)
+            # else:
+            #     pred = torch.argmax(F.softmax(pred, dim=1), dim=1)
             
 
             # if pred.shape != gt.shape:

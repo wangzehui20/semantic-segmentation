@@ -82,92 +82,6 @@ class BasicConv2d(nn.Module):
         return x
 
 
-class ResNet34Unet(nn.Module):
-    def __init__(self,
-                 num_classes,
-                 criterion=None,
-                 num_channels=3,
-                 is_deconv=False,
-                 decoder_kernel_size=3
-                 ):
-        super().__init__()
-
-        filters = [64, 128, 256, 512]
-        resnet = models.resnet34(pretrained=False)
-        self.base_size = 512
-        self.crop_size = 512
-        self._up_kwargs = {'mode': 'bilinear', 'align_corners': True}
-        # self.firstconv = resnet.conv1
-        # assert num_channels == 3, "num channels not used now. to use changle first conv layer to support num channels other then 3"
-        # try to use 8-channels as first input
-        if num_channels == 3:
-            self.firstconv = resnet.conv1
-        else:
-            self.firstconv = nn.Conv2d(num_channels, 64, kernel_size=(7, 7), stride=(2, 2), padding=(3, 3), bias=False)
-
-        self.firstbn = resnet.bn1
-        self.firstrelu = resnet.relu
-        self.firstmaxpool = resnet.maxpool
-        self.encoder1 = resnet.layer1
-        self.encoder2 = resnet.layer2
-        self.encoder3 = resnet.layer3
-        self.encoder4 = resnet.layer4
-
-        # Decoder
-        self.center = DecoderBlock(in_channels=filters[3],
-                                   n_filters=filters[3],
-                                   kernel_size=decoder_kernel_size,
-                                   is_deconv=is_deconv)
-        self.decoder4 = DecoderBlock(in_channels=filters[3] + filters[2],
-                                     n_filters=filters[2],
-                                     kernel_size=decoder_kernel_size,
-                                     is_deconv=is_deconv)
-        self.decoder3 = DecoderBlock(in_channels=filters[2] + filters[1],
-                                     n_filters=filters[1],
-                                     kernel_size=decoder_kernel_size,
-                                     is_deconv=is_deconv)
-        self.decoder2 = DecoderBlock(in_channels=filters[1] + filters[0],
-                                     n_filters=filters[0],
-                                     kernel_size=decoder_kernel_size,
-                                     is_deconv=is_deconv)
-        self.decoder1 = DecoderBlock(in_channels=filters[0] + filters[0],
-                                     n_filters=filters[0],
-                                     kernel_size=decoder_kernel_size,
-                                     is_deconv=is_deconv)
-
-        self.finalconv = nn.Sequential(nn.Conv2d(filters[0], 32, 3, padding=1, bias=False),
-                                       nn.BatchNorm2d(32),
-                                       nn.ReLU(inplace=True),
-                                       nn.Conv2d(32, num_classes, 1))
-
-        self.criterion = nn.BCEWithLogitsLoss()
-
-    def cal_loss(self, seg, gts):
-        return 0.5 * self.criterion(seg.squeeze(), gts[0].squeeze().float()) + \
-               1 * self.criterion(seg.squeeze(), gts[-1].squeeze().float())
-
-    def forward(self, x, gts):
-        # stem
-        x = self.firstconv(x)
-        x = self.firstbn(x)
-        x = self.firstrelu(x)
-        x_ = self.firstmaxpool(x)
-        # Encoder
-        e1 = self.encoder1(x_)
-        e2 = self.encoder2(e1)
-        e3 = self.encoder3(e2)
-        e4 = self.encoder4(e3)
-
-        center = self.center(e4)
-
-        d4 = self.decoder4(torch.cat([center, e3], 1))
-        d3 = self.decoder3(torch.cat([d4, e2], 1))
-        d2 = self.decoder2(torch.cat([d3, e1], 1))
-        d1 = self.decoder1(torch.cat([d2, x], 1))
-        f = self.finalconv(d1)
-        return self.criterion(f.squeeze(), gts[0].squeeze().float()), [f, f]
-
-
 class ChannelAttention(nn.Module):
     def __init__(self, in_planes):
         super(ChannelAttention, self).__init__()
@@ -269,17 +183,19 @@ class EPUnet(nn.Module):
                  activation: str = None,
                  is_deconv=False,
                  decoder_kernel_size=3,
+                 is_edge=False,
                  ):
         super().__init__()
         filters = [64, 128, 256, 512]
         self.activation = Activation(activation)
+        self.is_edge = is_edge
         self.encoder = get_encoder(
             encoder_name,
             in_channels=in_channels,
             depth=encoder_depth,
             weights=encoder_weights,
         )
-
+        self._up_kwargs = {'mode': 'bilinear', 'align_corners': True}
         self.psp = PSPModule(8 + 64)
         self.firstconv = nn.Sequential(
             nn.Conv2d(in_channels, 64, kernel_size=(3, 3), stride=(2, 2), padding=(1, 1), bias=False),
@@ -385,22 +301,24 @@ class EPUnet(nn.Module):
 
         if get_mid:
             return [finalseg, edge_result, mid]  # mid is not activation
-        # else:
-        #     return [finalseg, edge_result]
         else:
-            return finalseg
+            if self.is_edge:
+                return [finalseg, edge_result]
+            else:
+                return finalseg
 
 
 class SGEPUnet(nn.Module):
     def __init__(self,
                  classes=1,
                  pretrainpath=None,
+                 activation=None
                  ):
         super().__init__()
         filters = [64, 128, 256, 512]
-        self.pretrainpath = '/data/data/change_detection_whole/2012/models/EPUNet/effb1_bce/checkpoints/best.pth'
-        self.beforeUnet = EPUnet(activation='sigmoid')
-        self.afterUnet = EPUnet(activation='sigmoid')
+        self.pretrainpath = pretrainpath
+        self.beforeUnet = EPUnet(activation=activation)
+        self.afterUnet = EPUnet(activation=activation)
         self.disconv = nn.Sequential(nn.Conv2d(64 * 2, 64, 3, padding=1, bias=False),
                                      nn.BatchNorm2d(64),
                                      nn.ReLU(inplace=True),
@@ -426,7 +344,7 @@ class SGEPUnet(nn.Module):
         """
         pre1 = self.beforeUnet(x[0], get_mid=True)
         pre2 = self.afterUnet(x[1], get_mid=True)
-        chg = torch.sigmoid(self.disconv(torch.cat((pre1[-1] - pre2[-1], pre2[-1] - pre1[-1]), 1)))
+        chg = self.disconv(torch.cat((pre1[-1] - pre2[-1], pre2[-1] - pre1[-1]), 1))
         return [[pre1, pre2, chg]]
 
 # if __name__ == "__main__":

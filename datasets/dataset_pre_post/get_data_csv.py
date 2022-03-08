@@ -77,18 +77,28 @@ def csv_img(root_path, save_path):
 
 
 if __name__ == '__main__':
-    train_path = r'/data/data/semi_compete/clip_integrate/1024_384/labeled_train/image'
-    save_train_path = r'/data/data/semi_compete/clip_integrate/1024_384/labeled_train/train.csv'
-    save_val_path = r'/data/data/semi_compete/clip_integrate/1024_384/labeled_train/val.csv'
+    # train_path = r'/data/data/semi_compete/clip_integrate/512_128/labeled_train/image'
+    # save_train_path = r'/data/data/semi_compete/clip_integrate/512_128/labeled_train/train.csv'
+    # save_val_path = r'/data/data/semi_compete/clip_integrate/512_128/labeled_train/val.csv'
 
-    test_path = r'/data/data/semi_compete/clip_integrate/1024_384/val/image'
-    save_test_path = r'/data/data/semi_compete/clip_integrate/1024_384/val/test.csv'
+    # test_path = r'/data/data/semi_compete/clip_integrate/512_128/val/image'
+    # save_test_path = r'/data/data/semi_compete/clip_integrate/512_128/val/test.csv'
 
-    pseudo_path = r'/data/data/semi_compete/clip_integrate/1024_384/unlabeled_train/image'
-    save_pseudo_path = r'/data/data/semi_compete/clip_integrate/1024_384/unlabeled_train/pseudo.csv'
+    # pseudo_path = r'/data/data/semi_compete/clip_integrate/512_128/unlabeled_train/image'
+    # save_pseudo_path = r'/data/data/semi_compete/clip_integrate/512_128/unlabeled_train/pseudo.csv'
 
-    csv_img_mask(train_path, save_train_path, save_val_path)
+    # csv_img_mask(train_path, save_train_path, save_val_path)
+    # csv_img(test_path, save_test_path)
+    # csv_img(pseudo_path, save_pseudo_path)
+
+
+    train_path = r'/data/dataset/change_detection/merge/256_128/2012/image'
+    save_train_path = r'/data/dataset/change_detection/merge/256_128/2012/train.csv'
+
+    test_path = r'/data/dataset/change_detection/merge/256_128/2016/image'
+    save_test_path = r'/data/dataset/change_detection/merge/256_128/2016/test.csv'
+
+    csv_img(train_path, save_train_path)
     csv_img(test_path, save_test_path)
-    csv_img(pseudo_path, save_pseudo_path)
 
 

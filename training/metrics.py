@@ -2,6 +2,8 @@ import torch
 import torch.nn as nn
 import numpy as np
 from torch.nn.modules import module
+
+from core.mmodel.model_zoo.SGEPUNet import Activation
 from . import _modules as modules
 from . import functional as F
 from . import base
@@ -9,6 +11,37 @@ from . import base
 
 class IoU(base.Metric):
     __name__ = "iou"
+
+    def __init__(self, eps=1e-7, threshold=0.5, activation=None, ignore_channels=None,
+                 per_image=False, class_weights=None, drop_empty=False, take_channels=None, **kwargs):
+        super().__init__(**kwargs)
+        self.eps = eps
+        self.threshold = threshold
+        self.activation = modules.Activation(activation, dim=1)
+        self.ignore_channels = ignore_channels
+        self.per_image = per_image
+        self.class_weights = class_weights
+        self.drop_empty = drop_empty
+        self.take_channels = take_channels
+
+    @torch.no_grad()
+    def forward(self, y_pr, y_gt):
+        y_pr = self.activation(y_pr)
+        return F.iou(
+            y_pr, y_gt,
+            eps=self.eps,
+            threshold=self.threshold,
+            ignore_channels=self.ignore_channels,
+            per_image=self.per_image,
+            class_weights=self.class_weights,
+            drop_empty=self.drop_empty,
+            take_channels=self.take_channels,
+        )
+
+
+# only mask
+class IoU_mask(base.Metric):
+    __name__ = "iou_mask"
 
     def __init__(self, eps=1e-7, threshold=0.5, activation=None, ignore_channels=None,
                  per_image=False, class_weights=None, drop_empty=False, take_channels=None, **kwargs):
@@ -78,10 +111,14 @@ class MeanIoU(base.Metric):
             self.union[index] += union.detach()
 
         score = 0
+        iou = {}
         for (k, v) in self.intersection.items():
             intersection = self.intersection[k]
             union = self.union[k]
             score += (intersection + self.eps) / (union + self.eps)
+            iou[k] = (intersection + self.eps) / (union + self.eps)
+        print('')
+        print(iou)
 
         return score / (rng-1)
 
@@ -147,14 +184,38 @@ class FWIoU(base.Metric):
         return fwiou
 
 
+class Activation(nn.Module):
+
+    def __init__(self, name, **params):
+        super().__init__()
+
+        if name is None or name == 'identity':
+            self.activation = nn.Identity(**params)
+        elif name == 'sigmoid':
+            self.activation = nn.Sigmoid()
+        elif name == 'softmax':
+            self.activation = nn.Softmax(**params)
+        elif name == 'logsoftmax':
+            self.activation = nn.LogSoftmax(**params)
+        elif callable(name):
+            self.activation = name(**params)
+        else:
+            raise ValueError('Activation should be callable/sigmoid/softamx/logsoftmax/None; got {}'.format(name))
+
+    def forward(self, x):
+        return self.activation(x)
+
+
 class ChangeIoU(base.Metric):
     __name__ = 'iou'
 
-    def __init__(self):
+    def __init__(self, activation=None, thred=0.5):
         super(ChangeIoU, self).__init__()
         self.fhist = 0.
         self.bhist = 0.
         self.ahist = 0.
+        self.activation = Activation(activation)
+        self.thred = thred
 
     def reset(self):
         self.fhist = 0.
@@ -169,17 +230,25 @@ class ChangeIoU(base.Metric):
         return hist
 
     def cal_fseg(self, apre_seg, bmask, chg):
-        fseg = chg * apre_seg + bmask * (1 - chg)
+        fseg = chg * apre_seg.squeeze() + bmask.squeeze() * (1 - chg)
         return fseg
 
     @torch.no_grad()
     def __call__(self, pres, gts):
         [bseg_predict, bedge_predict, _], [aseg_predict, aedge_predict, _], chg = pres
         [[bmask, bedge], [amask, aedge]] = gts
-        fseg = self.cal_fseg(aseg_predict, bmask, chg).detach()
-        self.fhist += self.fast_hist((fseg > 0.5), amask).detach()
-        self.bhist += self.fast_hist((bseg_predict > 0.5), bmask).detach()
-        self.ahist += self.fast_hist((aseg_predict > 0.5), amask).detach()
+        bseg_predict = self.activation(bseg_predict)
+        aseg_predict = self.activation(aseg_predict)
+        chg = torch.sigmoid(chg.squeeze())
+        bmask = bmask.float()
+        bmask[bmask == 0] = -1
+        bmask[bmask > 0] = 1
+        bmask = bmask * 3
+
+        fseg = self.activation(self.cal_fseg(aseg_predict, bmask, chg)).detach()
+        self.fhist += self.fast_hist((fseg > self.thred), amask.squeeze()).detach()
+        self.bhist += self.fast_hist((bseg_predict > self.thred), bmask).detach()
+        self.ahist += self.fast_hist((aseg_predict > self.thred), amask).detach()
         iou = (torch.diag(self.fhist) / (
                     self.fhist.sum(axis=1) + self.fhist.sum(axis=0) - torch.diag(self.fhist))).detach()
         return iou[-1]

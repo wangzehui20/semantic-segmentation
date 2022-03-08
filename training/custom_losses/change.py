@@ -17,36 +17,36 @@ class SegEdgeLoss(nn.Module):
 
 
 class ChangeLoss(nn.Module):
-    def __init__(self, is_train=True, is_label=0):
+    def __init__(self, is_train=True):
         super().__init__()
         self.is_train = is_train
-        self.is_label = is_label
-        self.bce = nn.BCELoss()
+        self.bce=nn.BCEWithLogitsLoss(reduce=False)
 
-    def forward(self, pres, gts):
+    def forward(self, pres, gts, is_trainset=None):
         [bpre_seg, bpre_edge, _], [apre_seg, apre_edge, _], chg = pres
         [[bmask, bedge], [amask, aedge]] = gts
+        chg = torch.sigmoid(chg.squeeze())
         if self.is_train:
-            bloss = self.bce(bpre_seg, bmask) + self.bce(bpre_edge, bedge)
-            aloss = self.bce(apre_seg, amask) + self.bce(apre_edge, aedge)
-            # bmask_ = bmask.float().clone()
-            # bmask_[bmask_ == 0] = -1
-            # bmask_[bmask_ > 0] = 1
-            # bmask_ = bmask_ * 3
-            fseg = chg * apre_seg+ bmask * (1-chg)
-            aloss += self.bce(fseg, amask)
-            vloss = self.bce(apre_seg, (fseg>0).float())
+            bloss = self.bce(bpre_seg.squeeze(), bmask.squeeze().float()).mean(1,2) + self.bce(bpre_edge.squeeze(), bedge.squeeze().float()).mean(1,2)
+            aloss = self.bce(apre_seg.squeeze(), amask.squeeze().float()).mean(1,2) + self.bce(apre_edge.squeeze(), aedge.squeeze().float()).mean(1,2)
+            bmask = bmask.float()
+            bmask[bmask == 0] = -1
+            bmask[bmask > 0] = 1
+            bmask = bmask * 3
+            fseg = chg * apre_seg.squeeze()+ bmask.squeeze() * (1-chg)
+            aloss += self.bce(fseg, amask.squeeze().float()).mean(1,2)
+            vloss = self.bce(apre_seg.squeeze(), ((torch.sigmoid(fseg)>0.5).squeeze().float())).mean(1,2)
 
-            floss = bloss + aloss*self.is_label + vloss*(1-self.is_label)
+            floss = bloss + aloss*is_trainset + vloss*(1-is_trainset)
         else:
             bmask = bmask.float()
             bmask[bmask == 0] = -1
             bmask[bmask > 0] = 1
             bmask = bmask * 3
-            fseg = chg * apre_seg + bmask * (1 - chg)
-            floss = self.bce(fseg, amask)
+            fseg = chg * apre_seg.squeeze() + bmask.squeeze() * (1 - chg)
+            floss = self.bce(fseg, amask.squeeze().float()).mean(1,2)
 
-        return floss
+        return floss.mean()
 
 
 class SoftLabelCrossEntropyLoss(nn.Module):

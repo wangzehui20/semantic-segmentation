@@ -48,27 +48,13 @@ class SegDataset(Dataset):
         self.images_dir = images_dir
         self.masks_dir = masks_dir
         self.mask_onehot = mask_onehot
-        self.classes = 13
+        self.classes = 1
         self.transform = transforms.__dict__[transform_name] if transform_name else None
         self.tfms = pytorchtrans.Compose([pytorchtrans.ToTensor()])
         ignore_label = -1
         self.label_mapping = {
             0: 0,
-            1: 1,
-            2: 2,
-            3: 3,
-            4: 4,
-            5: 5,
-            6: 6,
-            7: 7,
-            8: 0,
-            9: 0,
-            10: 8,
-            11: 9,
-            12: 10,
-            13: 11,
-            14: 12,
-            15: 0,
+            255: 1,
         }
 
     def _get_ids(self, ids_csv):
@@ -98,9 +84,9 @@ class SegDataset(Dataset):
             # apply augmentations
             if self.transform is not None:
                 sample = self.transform(**sample)
-            sample['mask'] = pytorchtrans.ToTensor()(sample['mask'].astype('float32')).long()  # expand first dim for mask
-            sample['mask'] = sample['mask'][0]
-            # sample['mask'] = sample['mask']
+            sample['mask'] = pytorchtrans.ToTensor()(sample['mask'].astype('float32')).float()  # expand first dim for mask
+            # sample['mask'] = sample['mask'][0]
+            sample['mask'] = sample['mask']
         else:
             sample = dict(
                 id=nameid,

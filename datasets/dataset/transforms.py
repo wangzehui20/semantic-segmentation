@@ -25,15 +25,21 @@ post_transform = A.Lambda(name="post_transform", image=post_transform, mask=post
 # crop 512
 train_transform_1 = A.Compose([
     # A.RandomScale(scale_limit=0.3, p=0.5),
-    A.RandomCrop(512, 512, p=1.),
+    A.RandomCrop(256, 256, p=1.),
     A.Flip(p=0.75),
 ])
 
 train_transform_2 = A.Compose([
-    # A.RandomScale(scale_limit=0.3, p=0.5),
-    A.RandomCrop(1024, 1024, p=1.),
+    A.ShiftScaleRotate(scale_limit=0.15, rotate_limit=90, p=0.5),
     A.Flip(p=0.75),
+    A.RandomCrop(256, 256, p=1.),
 ])
+
+# train_transform_2 = A.Compose([
+#     # A.RandomScale(scale_limit=0.3, p=0.5),
+#     A.RandomCrop(1024, 1024, p=1.),
+#     A.Flip(p=0.75),
+# ])
 
 train_transform_3 = A.Compose([
     A.Resize(height=224, width=224, p=1),

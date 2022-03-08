@@ -7,8 +7,7 @@
 
 
 
+CUDA_VISIBLE_DEVICES=0,1 python -m torch.distributed.launch --nproc_per_node=2 train.py --configs /data/code/semantic-segmentation-semi-supervised-learning/config/change_detection/Unet/2012/res34_bce_woedge_lr0001_aug.yaml
 
-# local
-CUDA_VISIBLE_DEVICES=0,1 python -m torch.distributed.launch --nproc_per_node=2 train.py --configs /data/code/semantic-segmentation-semi-supervised-learning/config/segmentation/SwinTransformer/upernet_swin-s_weightcediceloss.yaml
 
 
