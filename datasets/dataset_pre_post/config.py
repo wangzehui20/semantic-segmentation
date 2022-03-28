@@ -6,9 +6,9 @@ class Config:
         self.IMAGE_STEP = 100000
 
         self.FILE_NAME = r"256_128"
-        self.ORI_DIR = r"/data/dataset/change_detection/origin_merge"
-        self.CLIP_DIR = r"/data/dataset/change_detection/merge"
-        self.RES_DIR = r"/data/dataset/change_detection/merge"
+        self.ORI_DIR = r"/data/dataset/update"
+        self.CLIP_DIR = r"/data/data/update"
+        self.RES_DIR = r"/data/data/update"
         
         # base project dir
         self.CLIP_BASEDIR = rf"{self.CLIP_DIR}/{self.FILE_NAME}"

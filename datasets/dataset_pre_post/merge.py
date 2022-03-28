@@ -3,7 +3,7 @@ import os
 import os.path as osp
 import shutil
 from common import check_dir, open_json
-from preprocess_align import WindowClip
+from process.preprocess_align import WindowClip
 from config import Config
 from common import check_dir
 from tqdm import tqdm

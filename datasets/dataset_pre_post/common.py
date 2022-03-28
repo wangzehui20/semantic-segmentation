@@ -6,7 +6,7 @@ import random
 import shutil
 from collections import Counter
 
-REMOVE_THRED = 0.2   # if background ratio > thred, remove this image
+REMOVE_THRED = 0.9   # if background ratio > thred, remove this image
 
 
 def check_dir(dir):

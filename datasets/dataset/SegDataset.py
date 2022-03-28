@@ -71,7 +71,8 @@ class SegDataset(Dataset):
         nameid = name  # .tif
         maskname = name
 
-        im_data = read_image(osp.join(self.images_dir, nameid))
+        # im_data = read_image(osp.join(self.images_dir, nameid))
+        im_data = cv2.imread(osp.join(self.images_dir, nameid))
         if self.masks_dir is not None:
             mask_data = self.convert_label(cv2.imread(osp.join(self.masks_dir, maskname), 0))
             if self.mask_onehot:
@@ -81,7 +82,7 @@ class SegDataset(Dataset):
                 id=maskname,
                 image=im_data,
                 mask=mask_data)
-            # apply augmentations
+            # apply augmentations   
             if self.transform is not None:
                 sample = self.transform(**sample)
             sample['mask'] = pytorchtrans.ToTensor()(sample['mask'].astype('float32')).float()  # expand first dim for mask

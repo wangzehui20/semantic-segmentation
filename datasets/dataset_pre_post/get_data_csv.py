@@ -71,6 +71,8 @@ def csv_img(root_path, save_path):
     names = os.listdir(root_path)
     c = Csv()
     for name in names:
+        if 'bg' in name:
+            continue
         data = {}
         data['name'] = name
         c.writecsv(save_path, data)
@@ -92,13 +94,13 @@ if __name__ == '__main__':
     # csv_img(pseudo_path, save_pseudo_path)
 
 
-    train_path = r'/data/dataset/change_detection/merge/256_128/2012/image'
-    save_train_path = r'/data/dataset/change_detection/merge/256_128/2012/train.csv'
+    # train_path = r'/data/dataset/change_detection/merge/256_128/2012/image'
+    # save_train_path = r'/data/dataset/change_detection/merge/256_128/2012/train.csv'
 
-    test_path = r'/data/dataset/change_detection/merge/256_128/2016/image'
-    save_test_path = r'/data/dataset/change_detection/merge/256_128/2016/test.csv'
+    test_path = r'/data/data/update/256_128/train/image'
+    save_test_path = r'/data/data/update/256_128/train/train.csv'
 
-    csv_img(train_path, save_train_path)
+    # csv_img(train_path, save_train_path)
     csv_img(test_path, save_test_path)
 
 
