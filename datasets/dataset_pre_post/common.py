@@ -6,8 +6,6 @@ import random
 import shutil
 from collections import Counter
 
-REMOVE_THRED = 0.9   # if background ratio > thred, remove this image
-
 
 def check_dir(dir):
     if not os.path.exists(dir): os.makedirs(dir)
@@ -46,10 +44,11 @@ def get_imlist(imdir):
     return imlist
 
 
-def is_lowimg(img):
+def is_lowimg(img, thred=0.9):
+    # if background ratio > thred, remove this image
     total = img.shape[0] * img.shape[1] * img.shape[2]
     counter = Counter(img.ravel())
-    if counter[0] / total > REMOVE_THRED:
+    if counter[0] / total > thred:
         return True
     return False
 

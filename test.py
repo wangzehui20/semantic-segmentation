@@ -93,13 +93,13 @@ def predict(cfg, model, dataloader):
             value = metric_func(pred, gt)
             values.append(value)
             if cfg.lrank == 0:
-                print('mean_iou: ', np.mean(values))
+                print('iou: ', np.mean(values))
 
-            # if pred.shape[1] == 1:
-            #     pred = F.sigmoid(pred)
-            #     pred = cal_binary_pred(pred)
-            # else:
-            #     pred = torch.argmax(F.softmax(pred, dim=1), dim=1)
+            if pred.shape[1] == 1:
+                pred = F.sigmoid(pred)
+                pred = cal_binary_pred(pred)
+            else:
+                pred = torch.argmax(F.softmax(pred, dim=1), dim=1)
             
 
             # if pred.shape != gt.shape:
@@ -110,6 +110,7 @@ def predict(cfg, model, dataloader):
 
             for i, pre in enumerate(pred):
                 pre = pre.data.cpu().numpy().astype(np.uint8)
+                pre = pre.transpose(1,2,0)
                 # pre = cv2.resize(pre, (1024,1024))   # resize to origin size
                 savepath = osp.join(cfg.outdir, names[i][:-4]+'.png')
                 cv2.imwrite(savepath, convert_label(pre, inverse=True))

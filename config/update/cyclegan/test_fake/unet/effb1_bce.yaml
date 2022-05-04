@@ -38,8 +38,8 @@ data:
   test_dataset:
     name: SegDataset
     init_params:
-      images_dir: /data/dataset/change_detection/2012/256_128/test/image
-      masks_dir: /data/dataset/change_detection/2012/256_128/test/mask
+      images_dir: /data/data/update/256_128/test/image_fake
+      masks_dir: /data/data/update/256_128/test/mask
       transform_name: test_transform_1
 
   unlabeled_dataset:

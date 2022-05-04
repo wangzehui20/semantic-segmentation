@@ -10,9 +10,8 @@ from .utils import TifInfo
 from .label_align import LabelAlign, CoordinateTransform
 
 
-def data_process(imori_path, imdst_dir, cfg, maskori_dir=None, maskdst_dir=None, start=0, lock=None, mode='test', is_align=False):
+def data_process(imori_path, imdst_dir, cfg, maskori_dir=None, maskdst_dir=None, start=0, lock=None, mode='test', is_align=False, bg_filter=False):
     # 1 读取栅格数据
-
     imori_info = TifInfo(imori_path)
     imname = imori_path.split('/')[-1]
     typeTf = TypeTransform()
@@ -21,6 +20,7 @@ def data_process(imori_path, imdst_dir, cfg, maskori_dir=None, maskdst_dir=None,
     if is_align:
         lblA = LabelAlign()
         freq = None  # 本次搜索优先考虑上一次的搜索结果
+
     # 2 影像分块
     cliplist = windowc.get_cliplist(imori_info.w, imori_info.h, cfg.WIDTH, cfg.HEIGHT, cfg.OVERLAP)
     statis = []
@@ -31,7 +31,7 @@ def data_process(imori_path, imdst_dir, cfg, maskori_dir=None, maskdst_dir=None,
         im_w = clip[3] - clip[2]
         im_h = clip[1] - clip[0]
         # start from upper-left point
-        corner_xy = [(x_min, y_min),(x_max, y_min),(x_max, y_max),(x_min, y_max)]   #[(),()...]
+        corner_xy = [(x_min, y_min),(x_max, y_min),(x_max, y_max),(x_min, y_max)]   # [(),()...]
         corner_geo = []
         for xy in corner_xy:
             corner_geo.append(imori_coordT.xy2geo(xy))
@@ -53,6 +53,9 @@ def data_process(imori_path, imdst_dir, cfg, maskori_dir=None, maskdst_dir=None,
         # (1) 存储裁剪的训练图片
         imdst_path = osp.join(imdst_dir, "{}_{}.png".format(imname[:-4], start))
         imdata = imori_info.dt.ReadAsArray(x_min, y_min, im_w, im_h)  # 获取分块数据
+
+        # image nodata is 256, ---spetial
+        imdata[imdata==256] = 0
         
         if im_w != cfg.WIDTH or im_h != cfg.HEIGHT:
             imdata_pad = np.zeros((imori_info.b, cfg.HEIGHT, cfg.WIDTH)).astype(typeTf.gdal2np(imori_info.t))
@@ -60,11 +63,12 @@ def data_process(imori_path, imdst_dir, cfg, maskori_dir=None, maskdst_dir=None,
             imdata = imdata_pad
 
         # 背景像素过多则不保存该图片
-        # if mode == 'train' and maskori_dir and is_lowimg(imdata):
-        #     continue
+        if mode == 'train' and bg_filter and maskori_dir and is_lowimg(imdata):
+            continue
 
         # 16位转8位
-        # imdata = typeTf.uint16Touint8(imdata)
+        if imori_info.t == 'UInt16' and np.any(imdata>255):
+            imdata = typeTf.uint16Touint8(imdata)
 
         # 保存为带坐标的.tif
         # save_tif(imori_path, imdata, imdst_path, corner_geo[0])   #.tif
@@ -81,7 +85,6 @@ def data_process(imori_path, imdst_dir, cfg, maskori_dir=None, maskdst_dir=None,
             maskori_path = osp.join(maskori_dir, imname)
             maskori_info = TifInfo(maskori_path)
             maskori_coordT = CoordinateTransform(maskori_info.dt)
-            # label proj
             (valid_w, valid_h) = windowc.valid_hw(imori_info, corner_xy[0], cfg)
 
             maskcorner_geo = []
@@ -114,8 +117,17 @@ def data_process(imori_path, imdst_dir, cfg, maskori_dir=None, maskdst_dir=None,
 
                 maskdata = rotrect_mat[clpmat_ul[0]:clpmat_ul[0]+valid_h,clpmat_ul[1]:clpmat_ul[1]+valid_w]
             else:
-                maskdata = maskori_info.dt.ReadAsArray(maskcorner_xy[0][0], maskcorner_xy[0][1], valid_w, valid_h)
-
+                # mask比image少一个像素
+                if y_min>=17408 and 'huairou' in imname:    # ---spetial
+                    maskdata = maskori_info.dt.ReadAsArray(maskcorner_xy[0][0], maskcorner_xy[0][1]-1, valid_w, valid_h)
+                elif x_min>=21120 and 'shunyi' in imname:   # ---spetial
+                    maskdata = maskori_info.dt.ReadAsArray(maskcorner_xy[0][0]-1, maskcorner_xy[0][1], valid_w, valid_h)
+                else:
+                    maskdata = maskori_info.dt.ReadAsArray(maskcorner_xy[0][0], maskcorner_xy[0][1], valid_w, valid_h)
+            
+            # mask nodata is 255, ---spetial
+            maskdata[maskdata==255] = 0
+            
             # 单波段则增加band维度
             if len(maskdata.shape) == 2:
                 maskdata = maskdata[np.newaxis, :, :]
@@ -126,17 +138,18 @@ def data_process(imori_path, imdst_dir, cfg, maskori_dir=None, maskdst_dir=None,
                 maskdata = maskdata_pad
 
             # 若真值背景像素过多则移除之前保存的训练图像
-            # if maskdst_dir and is_lowimg(maskdata):
-            #     os.remove(imdst_path)
-            #     continue
-
+            if mode=='train' and bg_filter and maskori_dir and is_lowimg(maskdata):
+                os.remove(imdst_path)
+                continue
+            
             # remove image background but has label
             maskdata = mask_imgbg(imdata, maskdata)
 
             # 将裁剪的真值数据保存到裁剪的训练图片坐标系中
             # save_tif(imori_path, maskdata, maskdst_path, corner_geo[0])   #.tif
 
-            # 测试集裁剪把mask全为0的图片筛选出来
+            # 测试集裁剪把mask全为0的图片筛选出来, ---spetial
+            # if np.all(imdata==0) or np.all(maskdata==0) or is_lowimg(imdata) or is_lowimg(maskdata):  
             if np.all(imdata==0):
                 maskdst_path = maskdst_path[:-4] + '_bg.png'
                 imdst_path = imdst_path[:-4] + '_bg.png'
@@ -180,8 +193,11 @@ def data_process_multi(inputs):
 
 
 def mask_imgbg(img, label):
+    """
+    filter no image but label
+    """
     msk = np.ones(label.shape).astype(np.bool)
-    for i in range(3):
+    for i in range(len(img)):
         msk = (msk * img[i]).astype(np.bool)
     label = (label * msk)
     return label
@@ -196,7 +212,7 @@ class TypeTransform():
         img: (band, h, w)
         """
         band = len(img)
-        assert band != 1 or band != 3
+        assert band != 1 or band != 3 
         for i in range(len(img)):
             im = img[i,:,:]
             if np.any(im!=0):

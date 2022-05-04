@@ -23,11 +23,11 @@ def get_train_data(orimg_dir, dstimg_dir, orilabel_dir, dstlabel_dir, cfg):
 if __name__ == '__main__':
     cfg = Config()
 
-    train_orimg_dir = rf"{cfg.ORI_DIR}/train/image"
-    train_orilabel_dir = rf"{cfg.ORI_DIR}/train/mask"
-    train_clpimg_dir = rf"{cfg.CLIP_DIR}/{cfg.FILE_NAME}/train/image"
-    train_clplabel_dir = rf"{cfg.CLIP_DIR}/{cfg.FILE_NAME}/train/mask"
-    train_statis_path = rf"{cfg.CLIP_DIR}/{cfg.FILE_NAME}/train/train_statis.json"
+    train_orimg_dir = rf"{cfg.ORI_DIR}/test/image"
+    train_orilabel_dir = rf"{cfg.ORI_DIR}/test/mask"
+    train_clpimg_dir = rf"{cfg.CLIP_DIR}/{cfg.FILE_NAME}/test/image"
+    train_clplabel_dir = rf"{cfg.CLIP_DIR}/{cfg.FILE_NAME}/test/mask"
+    train_statis_path = rf"{cfg.CLIP_DIR}/{cfg.FILE_NAME}/test/test_statis.json"
     check_dir(train_clpimg_dir)
     check_dir(train_clplabel_dir)
 

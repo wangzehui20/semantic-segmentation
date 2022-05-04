@@ -1,7 +1,7 @@
 # encoding: utf-8
 import os
 from tqdm import tqdm
-from preprocess_align import data_process, LabelAlign
+from process.preprocess_align import data_process
 from common import check_dir, get_imlist, save_json
 from config import Config
 

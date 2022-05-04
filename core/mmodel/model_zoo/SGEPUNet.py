@@ -288,7 +288,6 @@ class EPUnet(nn.Module):
         edge = self.res2(self.conv3(edge)) * F.interpolate(self.attention2(d2), x.shape[-2:], mode='bilinear',
                                                            align_corners=True)
         d1 = self.decoder1(torch.cat([d2, x], 1))
-        midseg = self.midconv(d1)
         edge = self.res1(self.conv2(edge)) * F.interpolate(self.attention1(d1), x.shape[-2:], mode='bilinear',
                                                            align_corners=True)
         edge_result = F.interpolate(self.conv1(edge), inp_size, mode='bilinear', align_corners=True)
@@ -315,7 +314,6 @@ class SGEPUnet(nn.Module):
                  activation=None
                  ):
         super().__init__()
-        filters = [64, 128, 256, 512]
         self.pretrainpath = pretrainpath
         self.beforeUnet = EPUnet(activation=activation)
         self.afterUnet = EPUnet(activation=activation)

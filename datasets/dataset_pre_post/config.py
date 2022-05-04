@@ -3,12 +3,11 @@ class Config:
         self.WIDTH = 256
         self.HEIGHT = 256
         self.OVERLAP = 128
-        self.IMAGE_STEP = 100000
 
         self.FILE_NAME = r"256_128"
-        self.ORI_DIR = r"/data/dataset/update"
-        self.CLIP_DIR = r"/data/data/update"
-        self.RES_DIR = r"/data/data/update"
+        self.ORI_DIR = r"/data/dataset/newupdate"
+        self.CLIP_DIR = r"/data/data/newupdate"
+        self.RES_DIR = r"/data/data/newupdate"
         
         # base project dir
         self.CLIP_BASEDIR = rf"{self.CLIP_DIR}/{self.FILE_NAME}"

@@ -1,4 +1,4 @@
-logdir: /data/data/update/models_256_128_cyclegan/train_fake/unet/effb1_bce/
+logdir: /data/data/update/models_256_128_reinhardmatch/train/unet/effb1_bce/
 gpus: [0,1]
 distributed: true
 fp16: false
@@ -22,7 +22,7 @@ data:
   train_dataset:
     name: SegDataset
     init_params:
-      images_dir: /data/data/update/256_128/train/image_fake
+      images_dir: /data/data/update/256_128/train/image_reinhardmatch
       masks_dir: /data/data/update/256_128/train/mask
       # ids_csv: /data/data/update/256_128/train/train.csv
       transform_name: train_transform_1
@@ -38,7 +38,7 @@ data:
   test_dataset:
     name: SegDataset
     init_params:
-      images_dir: /data/data/update/256_128/test/image
+      images_dir: /data/data/update/256_128/test/image_gan
       masks_dir: /data/data/update/256_128/test/mask
       transform_name: test_transform_1
 
@@ -74,7 +74,7 @@ data:
     num_workers: 0
 
   test_dataloader:
-    batch_size: 42
+    batch_size: 40
     shuffle: false
     drop_last: false
     pin_memory: false

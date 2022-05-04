@@ -52,11 +52,11 @@ if __name__ == '__main__':
 
 
     # rename pred_merge
-    origindir = r'/data/dataset/semi_compete/origin/val'
-    csp_dict = corresponding_dict(origindir)
-    submission_dir = r'/data/data/semi_compete/submission/swintransform_weightcediceloss'
-    check_dir(submission_dir)
-    rename_copy(predmerge_dir, submission_dir, csp_dict)
+    # origindir = r'/data/dataset/semi_compete/origin/val'
+    # csp_dict = corresponding_dict(origindir)
+    # submission_dir = r'/data/data/semi_compete/submission/swintransform_weightcediceloss'
+    # check_dir(submission_dir)
+    # rename_copy(predmerge_dir, submission_dir, csp_dict)
 
 
 

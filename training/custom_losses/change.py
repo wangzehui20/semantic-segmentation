@@ -22,29 +22,27 @@ class ChangeLoss(nn.Module):
         self.is_train = is_train
         self.bce=nn.BCEWithLogitsLoss(reduce=False)
 
-    def forward(self, pres, gts, is_trainset=None):
+    def forward(self, pres, gts, trainset=None):
         [bpre_seg, bpre_edge, _], [apre_seg, apre_edge, _], chg = pres
         [[bmask, bedge], [amask, aedge]] = gts
+        
         chg = torch.sigmoid(chg.squeeze())
+        bmask = bmask.float()
+        bmask[bmask == 0] = -1
+        bmask[bmask > 0] = 1
+        bmask = bmask * 3
+        fseg = chg * apre_seg.squeeze() + bmask.squeeze() * (1-chg)
         if self.is_train:
-            bloss = self.bce(bpre_seg.squeeze(), bmask.squeeze().float()).mean(1,2) + self.bce(bpre_edge.squeeze(), bedge.squeeze().float()).mean(1,2)
-            aloss = self.bce(apre_seg.squeeze(), amask.squeeze().float()).mean(1,2) + self.bce(apre_edge.squeeze(), aedge.squeeze().float()).mean(1,2)
-            bmask = bmask.float()
-            bmask[bmask == 0] = -1
-            bmask[bmask > 0] = 1
-            bmask = bmask * 3
-            fseg = chg * apre_seg.squeeze()+ bmask.squeeze() * (1-chg)
-            aloss += self.bce(fseg, amask.squeeze().float()).mean(1,2)
-            vloss = self.bce(apre_seg.squeeze(), ((torch.sigmoid(fseg)>0.5).squeeze().float())).mean(1,2)
+            bloss = self.bce(bpre_seg.squeeze(), bmask.squeeze().float()).mean((1,2)) + self.bce(bpre_edge.squeeze(), bedge.squeeze().float()).mean((1,2))
+            aloss = self.bce(apre_seg.squeeze(), amask.squeeze().float()).mean((1,2)) + self.bce(apre_edge.squeeze(), aedge.squeeze().float()).mean((1,2))
+            
+            
+            aloss += self.bce(fseg, amask.squeeze().float()).mean((1,2))
+            vloss = self.bce(apre_seg.squeeze(), ((torch.sigmoid(fseg)>0.5).squeeze().float())).mean((1,2))
 
-            floss = bloss + aloss*is_trainset + vloss*(1-is_trainset)
+            floss = bloss + aloss*trainset + vloss*(1-trainset)
         else:
-            bmask = bmask.float()
-            bmask[bmask == 0] = -1
-            bmask[bmask > 0] = 1
-            bmask = bmask * 3
-            fseg = chg * apre_seg.squeeze() + bmask.squeeze() * (1 - chg)
-            floss = self.bce(fseg, amask.squeeze().float()).mean(1,2)
+            floss = self.bce(fseg, amask.squeeze().float()).mean((1,2))
 
         return floss.mean()
 

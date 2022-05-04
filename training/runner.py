@@ -502,11 +502,11 @@ class Runner:
             metrics = self._compute_metrics(output, batch) if self.metrics is not None else {}
 
             # calculate loss and metrics on all gpus
-            # if torch.distributed.get_world_size() > 1:
-            #     for keys, values in losses.items():
-            #         losses[keys] = self._distributed_value(torch.Tensor([values]).cuda())
-            #     for keys, values in metrics.items():
-            #         metrics[keys] = self._distributed_value(torch.Tensor([values]).cuda())
+            if torch.distributed.get_world_size() > 1:
+                for keys, values in losses.items():
+                    losses[keys] = self._distributed_value(torch.Tensor([values]).cuda())
+                for keys, values in metrics.items():
+                    metrics[keys] = self._distributed_value(torch.Tensor([values]).cuda())
             meter.update(**losses, **metrics)
 
             # if os.path.exists(logdir):
