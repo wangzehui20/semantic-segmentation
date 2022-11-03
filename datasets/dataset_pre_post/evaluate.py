@@ -8,7 +8,6 @@ from tqdm import tqdm
 from osgeo import gdal
 from common import get_imlist
 
-
 def caloneimg_score(labelmerge_dir, predmerge_dir, label_map, eva_csvpath):
     """
     calculate one big image macro score
@@ -42,31 +41,42 @@ def calimg_score(labelmerge_dir, predmerge_dir, label_map, eva_csvpath):
     calculate all big images macro score
     """
     classes = len(label_map)+1
-    labelist = get_imlist(labelmerge_dir)
+    labelist = get_imlist(predmerge_dir)
     hist = np.zeros((classes, classes))
     e = Evaluate()
     c = Csv()
     for name in tqdm(labelist, total=len(labelist)):
-        labelpath = osp.join(labelmerge_dir, name)
+        # labelpath = osp.join(labelmerge_dir, name.replace('2012_merge', '2016_merge'))
+        labelpath = osp.join(labelmerge_dir, name.replace('2018', '2019'))
         predpath = osp.join(predmerge_dir, name)
-        label = read_image2(labelpath)
-        pred = read_image2(predpath)
-        # label = cv2.imread(labelpath, 0)
-        # pred = cv2.imread(predpath, 0)
+        # label = read_image2(labelpath)
+        # pred = read_image2(predpath)
+        label = cv2.imread(labelpath, 0)
+        pred = cv2.imread(predpath, 0)
+        label[label==255] = 0   # nodata value, update dataset origin mask
+
+        h, w = label.shape
+        pred = pred[:h, :w]
+
         for k, v in label_map.items():
             label[label==k] = v
             pred[pred==k] = v
         label[label>len(label_map)] = 0
         pred[pred>len(label_map)] = 0
         hist += e.fast_hist(pred, label, classes)
-    f1, f0_5, precision, recall = e.macroscore(hist)
-    print(f1, f0_5, precision, recall)
+    # f1, f0_5, precision, recall = e.macroscore(hist)
+    # print(f1, f0_5, precision, recall)
+    iou = e.iou(hist)
+    precision = e.precision(hist)
+    recall = e.recall(hist)
+    oa = e.oa(hist)
+    f1 = e.f1(hist)
+    print(' iou:', iou, ' precision:', precision, ' recall:', recall, ' oa:', oa, ' f1:', f1)
 
     # data = dict()
     # data['name'] = name
     # data['f1'] = f1
     # c.writecsv(eva_csvpath, data)
-
 
 def read_image2(filename):
     dataset = gdal.Open(filename)
@@ -136,8 +146,11 @@ class Csv:
 class Evaluate:
     """
     主要用来计算类别f1, precision, recall
+    hist: TN FP
+          FN TP
     """
     def __init__(self) -> None:
+        self.eps = 1e-8
         pass
 
     def fast_hist(self, pred, gt, nclass):
@@ -171,14 +184,68 @@ class Evaluate:
         f0_5 = self.fscore(prec, rec, 0.5)
         return f1, f0_5, prec, rec
 
+    def iou(self, hist):
+        intersection = hist[-1,-1]
+        union = np.sum(hist[-1,:]) + np.sum(hist[:,-1]) - intersection + self.eps
+        iou = intersection / union
+        return iou
+
+    def oa(self, hist):
+        oa = (hist[0,0] + hist[1,1]) / (np.sum(hist) + self.eps)
+        return oa
+
+    def precision(self, hist):
+        precision = hist[1,1] / (hist[0,1] + hist[1,1] + self.eps)
+        return precision
+
+    def recall(self, hist):
+        recall = hist[1,1] / (hist[1,0] + hist[1,1] + self.eps)
+        return recall
+
+    def f1(self, hist):
+        return self.fscore(self.precision(hist), self.recall(hist), 1)
 
 if __name__ == '__main__':
-    label_map = {80:1}
+    label_map = {255:1}
     # label_map = {10:1, 20:2, 60:3, 80:4}
-    label_dir = rf"/data/data/landset30/choose_data/label/all"
-    pred_dir = rf"/data/data/landset30/choose_data/clip_pred/clip_AWEIsh_5600open"
+    # label_dir = rf"/data/dataset/change_detection/origin_merge/2016/label"
+    # pred_dir = rf"/data/data/change_detection/models/cyclegan/unet/effb1_dicebce_edge_only_sa/pred_bigmap"
+
+    # label_dir = rf"/data/data/update/256_128/test/mask"
+    # pred_dir = rf"/data/data/update/models/cyclegan/unet/effb1_dicebce/mask_overlap"
+
     eva_csvpath = r'/data/data/landset30/newunion/csv/water/clip_AWEIsh_5600open.csv'
 
-    calimg_score(label_dir, pred_dir, label_map, eva_csvpath)
+    # calimg_score(label_dir, pred_dir, label_map, eva_csvpath)
+
+
+
+    # names= ['hm', 'reinhard', 'unit', 'train', 'cyclegan', 'drit']
+    names= ['cyclegan']
+
+    label_dir = r'/data/dataset/update/test/mask'
+    # label_dir = rf"/data/dataset/change_detection/origin_merge/2016/label"
+
+    # metd_names = ['ocrnet', 'pspnet', 'segformer', 'swintransformer', 'deeplabv3', 'unet']
+    # backb_names = ['hr18_dicebce', 'effb1_dicebce', 'b2_dicebce', 'upernet_swin-s_dicebce', 'effb1_dicebce', 'resnet50_dicebce']
+    metd_names = ['unet']
+    backb_names = ['effb1_dicebce']
+    threds = [0, 0.2, 0.4, 0.6, 0.8, 1]
+    # threds = [0.9, 0.95, 0.99]
+
+    for name in names:
+        for i, metd in enumerate(metd_names):
+            for thred in threds:
+                pred_dir = rf'/data/data/update/models/{name}/{metd}/{backb_names[i]}/mask_update_modify/mask_update_{thred}_bigmap'
+                calimg_score(label_dir, pred_dir, label_map, eva_csvpath)
+
+
+    # evaluate different threds
+    # names= ['0', '02', '04', '06', '08', '1']
+    # # label_dir = rf"/data/dataset/change_detection/origin_merge/2016/label"
+    # label_dir = r'/data/dataset/update/test/mask'
+    # for name in names:
+    #     pred_dir = rf"/data/data/update/models/cyclegan/unet/effb1_dicebce/mask_update_{name}_bigmap"
+    #     calimg_score(label_dir, pred_dir, label_map, eva_csvpath)
 
     

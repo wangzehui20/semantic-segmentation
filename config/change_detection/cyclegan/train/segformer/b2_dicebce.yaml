@@ -1,0 +1,126 @@
+logdir: /data/data/change_detection/models/cyclegan/segformer/b2_dicebce/
+gpus: [0,1]
+distributed: true
+fp16: false
+lrank: 0
+
+# define model
+model:
+  architecture: segformer_b2
+  model_scale: 1
+  preweightpath: /data/data
+  init_params:
+    in_channels: 3
+    classes: 1
+    pretrained: /data/initmodel/mmsegmentation/segformer_mit-b2_512x512_160k_ade20k_20210726_112103-cbd414ac.pth
+
+tta: False
+
+data:
+  # datasets
+  train_dataset:
+    name: SegDataset
+    init_params:
+      images_dir: /data/data/change_detection/merge/256_128/2012/image_cyclegan
+      masks_dir: /data/data/change_detection/merge/256_128/2012/mask
+      # ids_csv: /data/data/update/256_128/train/train.csv
+      transform_name: train_transform_2
+
+  valid_dataset:
+    name: SegDataset
+    init_params:
+      images_dir: /data/data/change_detection/merge/256_128/2016/image
+      masks_dir: /data/data/change_detection/merge/256_128/2016/mask
+      # ids_csv: /data/data/update/256_128/test/test.csv
+      transform_name: test_transform_1
+
+  test_dataset:
+    name: SegDataset
+    init_params:
+      images_dir: /data/data/change_detection/merge/256_128/2016/image
+      masks_dir: /data/data/change_detection/merge/256_128/2016/mask
+      transform_name: test_transform_1
+
+  unlabeled_dataset:
+    name: SegDataset
+    init_params:
+      images_dir: /data/data/semi_compete/clip_integrate/512_128/unlabeled_train/image
+      ids_csv: /data/data/semi_compete/clip_integrate/512_128/unlabeled_train/pseudo.csv
+      transform_name: test_transform_1
+      
+  pseudo_dataset:
+    name: PseudoDataset
+    init_params:
+      images_dir: /data/data/semi_compete/clip_integrate/512_128/labeled_train/image
+      masks_dir: /data/data/semi_compete/clip_integrate/512_128/labeled_train/mask
+      pse_images_dir: /data/data/semi_compete/clip_integrate/512_128/unlabeled_train/image
+      pse_masks_dir: /data/data/semi_compete/clip_integrate/512_128/unlabeled_train/mask
+      ids_csv: /data/data/semi_compete/clip_integrate/512_128/labeled_train/train.csv
+      transform_name: train_transform_1
+
+  # loaders
+  train_dataloader:
+    batch_size: 128
+    drop_last: true
+    pin_memory: true
+    num_workers: 0
+
+  valid_dataloader:
+    batch_size: 128
+    shuffle: false
+    drop_last: false
+    pin_memory: true
+    num_workers: 0
+
+  test_dataloader:
+    batch_size: 64
+    shuffle: false
+    drop_last: false
+    pin_memory: false
+    num_workers: 0
+
+  unlabeled_dataloader:
+    batch_size: 8
+    shuffle: false
+    drop_last: false
+    pin_memory: true
+    num_workers: 0
+
+  pseudo_dataloader:
+    batch_size: 8
+    drop_last: true
+    pin_memory: true
+    num_workers: 0
+
+training:
+
+  losses:
+    mask:
+      name: DICE_BCE
+      init_params:
+
+  metrics:
+    mask:
+      - name: IoU
+        init_params:
+          activation: sigmoid
+
+  optimizer:
+    name: adamw
+    init_params:
+      lr: 0.001
+
+  scheduler:
+    name: WarmupPolyLR
+    init_params:
+      epochs: 100
+
+  fit:
+    epochs: 60
+    accumulation_steps: 1
+    verbose: true
+
+  callbacks: []
+
+logging:
+  save_top: 10

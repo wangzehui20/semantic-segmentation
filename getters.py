@@ -16,7 +16,6 @@ def get_model(architecture, init_params):
     elif mmseg_contain(architecture):
         return get_mmseg_model(architecture, **init_params)
     else:
-        print(architecture)
         model_class = smp.__dict__[architecture]
         return model_class(**init_params)
 

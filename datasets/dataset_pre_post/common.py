@@ -35,7 +35,7 @@ def save_pickle(path, result):
 
 
 def imfilter(file):
-    return True if file[-4:] in ['.tif', '.img'] else False
+    return True if file[-4:] in ['.tif', '.img', '.png'] else False
 
 
 def get_imlist(imdir):

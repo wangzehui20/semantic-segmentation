@@ -40,15 +40,14 @@ if __name__ == '__main__':
     cfg = Config()
     windowc = WindowClip()
 
-    cfg.RES_BASEDIR = rf"{cfg.RES_DIR}/models/swinTransform/upernet_swin-s_weightcediceloss"
-    test_orimg_dir = rf"{cfg.ORI_DIR}/val/image"
-    test_shiftul_path = rf"{cfg.CLIP_DIR}/512_128/val/test_shiftul.json"
-    pred_dir = rf"{cfg.RES_BASEDIR}/pred"
-    predmerge_dir = rf"{cfg.RES_BASEDIR}/pred_merge"
+    # test_orimg_dir = rf"/data/dataset/change_detection/origin_merge/2016/label"
+    # test_shiftul_path = rf"/data/data/change_detection/merge/256_128/2016/shiftul.json"
+    # pred_dir = rf"/data/data/change_detection/models/drit_concat/unet/effb1_dicebce_resume/mask_update_1"
+    # predmerge_dir = rf"/data/data/change_detection/models/drit_concat/unet/effb1_dicebce_resume/mask_update_1_bigmap"
 
-    check_dir(predmerge_dir)
-    shift_ul = open_json(test_shiftul_path)   # '0.jpg': ['tif_name', shift_x, shift_y]
-    windowc.merge(test_orimg_dir, pred_dir, predmerge_dir, shift_ul, cfg)   # merge pred
+    # check_dir(predmerge_dir)
+    # shift_ul = open_json(test_shiftul_path)   # '0.jpg': ['tif_name', shift_x, shift_y]
+    # windowc.merge(test_orimg_dir, pred_dir, predmerge_dir, shift_ul, cfg)   # merge pred
 
 
     # rename pred_merge
@@ -57,6 +56,51 @@ if __name__ == '__main__':
     # submission_dir = r'/data/data/semi_compete/submission/swintransform_weightcediceloss'
     # check_dir(submission_dir)
     # rename_copy(predmerge_dir, submission_dir, csp_dict)
+
+
+
+    # merge other methods patch 
+    # names= ['hm', 'reinhard', 'unit', 'train', 'cyclegan', 'drit']
+    names= ['cyclegan']
+
+    # test_orimg_dir = rf"/data/dataset/change_detection/origin_merge/2016/label"
+    # test_shiftul_path = rf"/data/data/change_detection/merge/256_128/2016/shiftul.json"
+    test_orimg_dir = rf"/data/dataset/update/train/mask_modify"
+    test_shiftul_path = rf"/data/data/update/256_128/train_modify/shiftul.json"
+
+    shift_ul = open_json(test_shiftul_path)   # '0.jpg': ['tif_name', shift_x, shift_y]
+
+    # metd_names = ['ocrnet', 'pspnet', 'segformer', 'swintransformer', 'deeplabv3', 'unet']
+    # backb_names = ['hr18_dicebce', 'effb1_dicebce', 'b2_dicebce', 'upernet_swin-s_dicebce', 'effb1_dicebce', 'resnet50_dicebce']
+    metd_names = ['unet']
+    backb_names = ['effb1_dicebce']
+    threds = [0, 0.2, 0.4, 0.6, 0.8, 1]
+    # threds = [0.9, 0.95, 0.99]
+
+    for name in names:
+        for i, metd in enumerate(metd_names):
+            for thred in threds:
+            # pred_dir = rf"/data/data/update/models/{name}/{metd}/{backb_names[i]}/pred"
+            # predmerge_dir = rf"/data/data/update/models/{name}/{metd}/{backb_names[i]}/pred_bigmap"
+                pred_dir = rf"/data/data/update/models/{name}/{metd}/{backb_names[i]}/mask_update_modify/mask_update_{thred}"
+                predmerge_dir = rf"/data/data/update/models/{name}/{metd}/{backb_names[i]}/mask_update_modify/mask_update_{thred}_bigmap"
+                check_dir(predmerge_dir)
+                windowc.merge(test_orimg_dir, pred_dir, predmerge_dir, shift_ul, cfg)   # merge pred
+
+
+    # merge different threds
+    # names= ['0', '02', '04', '06', '08', '1']
+    # names= ['image_cyclegan', 'image_drit_concat_resume', 'image_unit', 'image_reinhard', 'image_hm']
+    # test_orimg_dir = rf"/data/dataset/change_detection/origin_merge/2016/label"
+    # test_shiftul_path = rf"/data/data/change_detection/merge/256_128/2016/shiftul.json"
+    # # test_orimg_dir = rf"/data/dataset/update/test/mask"
+    # # test_shiftul_path = rf"/data/data/update/256_128/test/shiftul.json"
+    # shift_ul = open_json(test_shiftul_path)   # '0.jpg': ['tif_name', shift_x, shift_y]
+    # for name in names:
+    #     pred_dir = rf"/data/data/change_detection/merge/256_128/2012/{name}"
+    #     predmerge_dir = rf"/data/data/change_detection/merge/256_128/2012/trans_bigmap/{name}"
+    #     check_dir(predmerge_dir)
+    #     windowc.merge(test_orimg_dir, pred_dir, predmerge_dir, shift_ul, cfg, band=3)   # merge pred
 
 
 

@@ -741,6 +741,15 @@ class DICE_BCE(base.Loss):
     def forward(self, inputs, targets):
         return self.dice(inputs, targets)*0.5 + self.bce(inputs, targets)*0.5
 
+class DICE_3BCE(base.Loss):
+    def __init__(self, ignore_label=-1):
+        super(DICE_3BCE, self).__init__()
+        self.ignore_index = ignore_label
+        self.dice = smp_loss.DiceLoss(mode='binary', ignore_index=ignore_label)
+        self.bce = smp_loss.SoftBCEWithLogitsLoss(ignore_index=ignore_label)
+
+    def forward(self, inputs, targets):
+        return self.dice(inputs, targets)*0.5 + self.bce(inputs, targets)*1.5
 
 class WeightCEDiceLoss(nn.Module):
     """

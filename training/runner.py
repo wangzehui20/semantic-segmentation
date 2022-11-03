@@ -12,6 +12,9 @@ import json
 from typing import Optional, Type
 import warnings
 import torch.distributed as dist
+import pandas as pd
+import random
+import getters
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 from typing import Dict, List, Mapping, Union
@@ -22,6 +25,16 @@ from torch.cuda.amp import autocast as autocast
 from .pseudo_dataset import PseudoDataset
 from .losses import WeightCEDiceLoss
 
+
+def worker_init_fn(seed=0):
+    seed = (seed + 1)
+    np.random.seed(seed)
+    random.seed(seed)
+    random.Random().seed(seed)
+
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
 
 def graytorgb(img):
     label_mapping_rgb = {0: (255, 255, 255),
@@ -122,9 +135,10 @@ class Runner:
             fp16=False,
             train_sampler=None,
             distributed=False,
-            unlabeled_dataloader=None,
+            # unlabeled_dataloader=None,
             pseudo_dataset=None,
             pseudo_dataloader=None,
+            cfg_data=None
     ):
 
         self.model = model
@@ -142,10 +156,11 @@ class Runner:
         self.train_sampler = train_sampler
         self.scaler = torch.cuda.amp.GradScaler()
         self.distributed = distributed
-        self.unlabeled_dataloader = unlabeled_dataloader
+        # self.unlabeled_dataloader = unlabeled_dataloader
         self.pseudo_dataset = pseudo_dataset
         self.pseudo_dataloader = pseudo_dataloader
         self.training = True
+        self.cfg_data = cfg_data
 
         # self.class_weights_json = load_json('/data/data/semi_compete/clip_integrate/512_128/labeled_train/class_weights.json')
 
@@ -232,6 +247,46 @@ class Runner:
             pseudo_dataset, **dataloader, sampler=pseudo_sampler,
         )
         return pseudo_dataloader
+
+    # create huapo 5 fold dataloader
+    def _generate_huapo_dataloader(self, fold_id, distributed):
+        df = pd.read_csv(self.cfg_data.df_path, dtype={'id': object})
+        train_ids = df[df['fold'] != int(fold_id)]['id'].tolist()
+        valid_ids = df[df['fold'] == int(fold_id)]['id'].tolist()
+
+        assert (len(train_ids)) != 0
+        assert not set(train_ids).intersection(set(valid_ids))
+
+        train_dataset = getters.get_dataset(
+            name=self.cfg_data.train_dataset.name,
+            ids = train_ids,
+            init_params=self.cfg_data.train_dataset.init_params,
+        )
+
+        train_sampler = None
+        if distributed:
+            train_sampler = torch.utils.data.distributed.DistributedSampler(train_dataset)
+
+        train_dataloader = torch.utils.data.DataLoader(
+            train_dataset, **self.cfg_data.train_dataloader, sampler=train_sampler, shuffle=train_sampler is None,
+            worker_init_fn=worker_init_fn
+        )
+
+        valid_dataset = getters.get_dataset(
+            name=self.cfg_data.valid_dataset.name,
+            ids=valid_ids,
+            init_params=self.cfg_data.valid_dataset.init_params,
+        )
+
+        valid_sampler = None
+        if distributed:
+            valid_sampler = torch.utils.data.distributed.DistributedSampler(valid_dataset)
+        
+        valid_dataloader = torch.utils.data.DataLoader(
+            valid_dataset, **self.cfg_data.valid_dataloader, sampler=valid_sampler,
+        )
+
+        return train_dataloader, valid_dataloader
 
     def _update_masks(self, masks_dir):
         """
@@ -368,12 +423,15 @@ class Runner:
 
         # start training loop
         startt = time.time()
-        for epoch in range(initial_epoch, epochs):
+        for eidx, epoch in enumerate(range(initial_epoch, epochs)):
             # semi-supervised learning
-            if epoch >= 200:
-                self.pseudo(self.unlabeled_dataloader, epoch=epoch)
-                train_dataloader = self._generate_pseudo_dataloader(self.pseudo_dataset, self.pseudo_dataloader,
-                                                                    self.distributed)
+            # if epoch >= 200:
+            #     self.pseudo(self.unlabeled_dataloader, epoch=epoch)
+            #     train_dataloader = self._generate_pseudo_dataloader(self.pseudo_dataset, self.pseudo_dataloader,
+                                                                    # self.distributed)
+
+            # update dataloader
+            # train_dataloader, valid_dataloader = self._generate_huapo_dataloader(eidx%5, distributed=self.distributed)
 
             if self.train_sampler is not None:  # 必须设置随机数种子，不然不会随机
                 self.train_sampler.set_epoch(epoch)

@@ -22,7 +22,7 @@ def data_process(imori_path, imdst_dir, cfg, maskori_dir=None, maskdst_dir=None,
         freq = None  # 本次搜索优先考虑上一次的搜索结果
 
     # 2 影像分块
-    cliplist = windowc.get_cliplist(imori_info.w, imori_info.h, cfg.WIDTH, cfg.HEIGHT, cfg.OVERLAP)
+    cliplist = windowc.get_cliplist(imori_info.w, imori_info.h, cfg.WIDTH, cfg.HEIGHT, cfg.OVERLAP, direction=False)
     statis = []
 
     # 3 根据裁剪框对训练数据和真值裁剪
@@ -118,10 +118,10 @@ def data_process(imori_path, imdst_dir, cfg, maskori_dir=None, maskdst_dir=None,
                 maskdata = rotrect_mat[clpmat_ul[0]:clpmat_ul[0]+valid_h,clpmat_ul[1]:clpmat_ul[1]+valid_w]
             else:
                 # mask比image少一个像素
-                if y_min>=17408 and 'huairou' in imname:    # ---spetial
+                if y_min>=17408:    # ---spetial
                     maskdata = maskori_info.dt.ReadAsArray(maskcorner_xy[0][0], maskcorner_xy[0][1]-1, valid_w, valid_h)
-                elif x_min>=21120 and 'shunyi' in imname:   # ---spetial
-                    maskdata = maskori_info.dt.ReadAsArray(maskcorner_xy[0][0]-1, maskcorner_xy[0][1], valid_w, valid_h)
+                # elif x_min>=21120 and 'shunyi' in imname:   # ---spetial
+                #     maskdata = maskori_info.dt.ReadAsArray(maskcorner_xy[0][0]-1, maskcorner_xy[0][1], valid_w, valid_h)
                 else:
                     maskdata = maskori_info.dt.ReadAsArray(maskcorner_xy[0][0], maskcorner_xy[0][1], valid_w, valid_h)
             
@@ -153,7 +153,7 @@ def data_process(imori_path, imdst_dir, cfg, maskori_dir=None, maskdst_dir=None,
             if np.all(imdata==0):
                 maskdst_path = maskdst_path[:-4] + '_bg.png'
                 imdst_path = imdst_path[:-4] + '_bg.png'
-            cv2.imwrite(imdst_path, imdata.transpose(1, 2, 0)[:, :, ::-1].astype(np.uint8))  # .png
+            # cv2.imwrite(imdst_path, imdata.transpose(1, 2, 0)[:, :, ::-1].astype(np.uint8))  # .png
             cv2.imwrite(maskdst_path, convert_label(maskdata.squeeze(), inverse=True))  # .png
 
             if lock:

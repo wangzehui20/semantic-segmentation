@@ -84,7 +84,6 @@ def main(cfg):
 
     import getters
     model = getters.get_model(architecture=cfg.model.architecture, init_params=cfg.model.init_params)
-
     cfg.model.preweightpath = kep_path(cfg.model.preweightpath)
     if osp.isfile(cfg.model.preweightpath):
         print("Model load from -> ", cfg.model.preweightpath)
@@ -114,11 +113,22 @@ def main(cfg):
     # --------------------------------------------------
 
     print('Creating datasets and loaders..')
+    # df = pd.read_csv(cfg.data.df_path, dtype={'id': object})
+    # train_ids = df[df['fold'] != int(cfg.data.fold)]['id'].tolist()
+    # valid_ids = df[df['fold'] == int(cfg.data.fold)]['id'].tolist()
+
+    # assert (len(train_ids)) != 0
+    # assert not set(train_ids).intersection(set(valid_ids))
 
     train_dataset = getters.get_dataset(
         name=cfg.data.train_dataset.name,
         init_params=cfg.data.train_dataset.init_params,
     )
+    # train_dataset = getters.get_dataset(
+    #     name=cfg.data.train_dataset.name,
+    #     ids = train_ids,
+    #     init_params=cfg.data.train_dataset.init_params,
+    # )
 
     train_sampler = None
     if cfg.distributed:
@@ -133,6 +143,11 @@ def main(cfg):
         name=cfg.data.valid_dataset.name,
         init_params=cfg.data.valid_dataset.init_params,
     )
+    # valid_dataset = getters.get_dataset(
+    #     name=cfg.data.valid_dataset.name,
+    #     ids=valid_ids,
+    #     init_params=cfg.data.valid_dataset.init_params,
+    # )
 
     valid_sampler = None
     if cfg.distributed:
@@ -142,18 +157,18 @@ def main(cfg):
         valid_dataset, **cfg.data.valid_dataloader, sampler=valid_sampler,
     )
 
-    unlabeled_dataset = getters.get_dataset(
-        name=cfg.data.unlabeled_dataset.name,
-        init_params=cfg.data.unlabeled_dataset.init_params,
-    )
+    # unlabeled_dataset = getters.get_dataset(
+    #     name=cfg.data.unlabeled_dataset.name,
+    #     init_params=cfg.data.unlabeled_dataset.init_params,
+    # )
 
-    unlabeled_sampler = None
-    if cfg.distributed:
-        unlabeled_sampler = torch.utils.data.distributed.DistributedSampler(unlabeled_dataset)
+    # unlabeled_sampler = None
+    # if cfg.distributed:
+    #     unlabeled_sampler = torch.utils.data.distributed.DistributedSampler(unlabeled_dataset)
 
-    unlabeled_dataloader = torch.utils.data.DataLoader(
-        unlabeled_dataset, **cfg.data.unlabeled_dataloader, sampler=unlabeled_sampler,
-    )
+    # unlabeled_dataloader = torch.utils.data.DataLoader(
+    #     unlabeled_dataset, **cfg.data.unlabeled_dataloader, sampler=unlabeled_sampler,
+    # )
 
 
     # --------------------------------------------------
@@ -251,9 +266,10 @@ def main(cfg):
         train_sampler=train_sampler,
         distributed=cfg.distributed,
         **cfg.training.runner,
-        unlabeled_dataloader=unlabeled_dataloader,
+        # unlabeled_dataloader=unlabeled_dataloader,
         pseudo_dataset=cfg.data.pseudo_dataset.init_params,
         pseudo_dataloader=cfg.data.pseudo_dataloader,
+        cfg_data=cfg.data
     )
 
     runner.compile(

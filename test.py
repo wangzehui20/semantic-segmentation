@@ -8,14 +8,17 @@ import cv2
 import numpy as np
 import getters
 import torch.nn.functional as F
+# import h5py
 from torch.utils.data import Dataset
 from torch.nn import DataParallel
 from testing import ttach
 from testing.ttach.wrappers import SegmentationTTAWrapper
 from training.config import parse_config
 from core.mmodel.mmodel_getter import SegmentationScale
-from datasets.dataset.SegDataset import SegDataset
-from training.metrics import IoU, MeanIoU
+from datasets.dataset.SegDataset import SegDataset, SegEdgeDataset
+from datasets.dataset.SegMaskDataset import SegMaskDataset
+# from datasets.dataset.HuapoDataset import HuapoDataset
+from training.metrics import IoU, MeanIoU, MicroF1
 from tqdm import tqdm
 
 
@@ -78,6 +81,12 @@ def metric_func(pred, gt):
     return value
 
 
+# def img2h5(h5path, img):
+#     f = h5py.File(h5path, 'w')
+#     f.create_dataset('mask', data=img)
+#     f.close()
+
+
 def predict(cfg, model, dataloader):
     # classes = 2
     model.eval()
@@ -93,7 +102,7 @@ def predict(cfg, model, dataloader):
             value = metric_func(pred, gt)
             values.append(value)
             if cfg.lrank == 0:
-                print('iou: ', np.mean(values))
+                print('IoU: ', np.mean(values))
 
             if pred.shape[1] == 1:
                 pred = F.sigmoid(pred)
@@ -102,8 +111,8 @@ def predict(cfg, model, dataloader):
                 pred = torch.argmax(F.softmax(pred, dim=1), dim=1)
             
 
-            # if pred.shape != gt.shape:
-            #     pred = pred.squeeze(1)
+            if pred.shape != gt.shape:
+                pred = pred.squeeze(1)
 
             # hist += fast_hist(pred, gt, classes)
             # f1, _, _ = cal_score(hist)
@@ -112,9 +121,12 @@ def predict(cfg, model, dataloader):
                 pre = pre.data.cpu().numpy().astype(np.uint8)
                 pre = pre.transpose(1,2,0)
                 # pre = cv2.resize(pre, (1024,1024))   # resize to origin size
-                savepath = osp.join(cfg.outdir, names[i][:-4]+'.png')
+                savepath = osp.join(cfg.outdir, names[i][:-3]+'png')
                 cv2.imwrite(savepath, convert_label(pre, inverse=True))
                 # cv2.imwrite(savepath, graytorgb(convert_label(pre, inverse=True)))
+
+                # savepath = osp.join(cfg.outdir, names[i])
+                # img2h5(savepath, pre.squeeze())
 
             # release memory of cuda
             pred = None
@@ -171,6 +183,7 @@ def main(cfg):
     # --------------------------------------------------
 
     print('Creating datasets and loaders..')
+    # test_dataset = SegMaskDataset(**cfg.data.test_dataset.init_params)
     test_dataset = SegDataset(**cfg.data.test_dataset.init_params)
 
     test_sampler = None

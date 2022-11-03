@@ -2,6 +2,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from core.mmodel.model_zoo.Unet_bifpn import Unet_bifpn
 from core.mmodel.model_zoo.SGEPUNet import EPUnet, SGEPUnet
+from core.mmodel.model_zoo.UnetEdge import UnetEdge
 
 
 def get_mymodel(architecture, **init_params):
@@ -24,6 +25,7 @@ config_get = {
     "Unet_bifpn": Unet_bifpn,
     "EPUnet": EPUnet,
     "SGEPUnet": SGEPUnet,
+    "UnetEdge": UnetEdge,
     # "Unet_swin": Unet_swin
 }
 

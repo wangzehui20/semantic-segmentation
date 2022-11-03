@@ -9,27 +9,47 @@ class WindowClip():
         pass
     
     # 滑动窗口的形式返回裁剪区域
-    def get_cliplist(self, width, height, clipw, cliph, overlap):
+    def get_cliplist(self, width, height, clipw, cliph, overlap, direction=False):
+        """
+        direction: False represents x axis and True represents y axis 
+        """
         start_w = 0
         start_h = 0
         end_w = clipw
         end_h = cliph
         crop_box_list = []
-        while start_h < height:
-            if end_h > height:
-                end_h = height
+        if not direction:
+            while start_h < height:
+                if end_h > height:
+                    end_h = height
+                while start_w < width:
+                    if end_w > width:
+                        end_w = width
+                    crop_box_list.append([start_h, end_h, start_w, end_w])
+                    if end_w == width: break
+                    start_w = end_w - overlap
+                    end_w = start_w + clipw
+                if end_h == height: break
+                start_h = end_h - overlap
+                end_h = start_h + cliph
+                start_w = 0
+                end_w = clipw
+        else:
             while start_w < width:
                 if end_w > width:
                     end_w = width
-                crop_box_list.append([start_h, end_h, start_w, end_w])
+                while start_h < height:
+                    if end_h > height:
+                        end_h = height
+                    crop_box_list.append([start_h, end_h, start_w, end_w])
+                    if end_h == height: break
+                    start_h = end_h - overlap
+                    end_h = start_h + cliph
                 if end_w == width: break
                 start_w = end_w - overlap
                 end_w = start_w + clipw
-            if end_h == height: break
-            start_h = end_h - overlap
-            end_h = start_h + cliph
-            start_w = 0
-            end_w = clipw
+                start_h = 0
+                end_h = cliph
         return crop_box_list
 
     def valid_hw(self, info, xy, cfg):
@@ -44,9 +64,17 @@ class WindowClip():
 
     # half overlap merge
     def recover_clip_box(self, pred_dir, mask_merge, img_info, cfg):
-        img_path = os.path.join(pred_dir, img_info[0][:-4]+'.png')
-        img = cv2.imread(img_path, cv2.IMREAD_GRAYSCALE)
-        
+        n_band = len(mask_merge)
+        # img_path = os.path.join(pred_dir, img_info[0][:-4]+'.png')
+        img_path = os.path.join(pred_dir, img_info[0][:-4]+'.png').replace('2018', '2019') # tmp
+        if n_band > 1:
+            img = cv2.imread(img_path).transpose(2,0,1)
+        else:
+            img = cv2.imread(img_path, cv2.IMREAD_GRAYSCALE)
+            if img is not None:
+                img = img[np.newaxis,:,:]
+        if img is None:
+            img = np.zeros((n_band, cfg.HEIGHT, cfg.WIDTH))
         # pred
         # img_path = os.path.join(pred_dir, img_info[0][:-4]+'.npy')
         # img = np.load(img_path)
@@ -98,8 +126,7 @@ class WindowClip():
                 # mask_merge
                 start_shift_y = shift_y + start_y
                 end_shift_y = shift_y + end_y
-
-        mask_merge[start_shift_y:end_shift_y, start_shift_x:end_shift_x] = img[start_y:end_y, start_x:end_x]
+        mask_merge[:, start_shift_y:end_shift_y, start_shift_x:end_shift_x] = img[:, start_y:end_y, start_x:end_x]
         return mask_merge
 
     # next image union last image
@@ -133,7 +160,7 @@ class WindowClip():
 
 
     # merge from small clip image to full image
-    def merge(self, orimg_dir, pred_dir, predmerge_dir, shift_ul, cfg):
+    def merge(self, orimg_dir, pred_dir, predmerge_dir, shift_ul, cfg, band=1):
         tif_list = get_imlist(orimg_dir)
         tif2img_list = self.get_bigtif2imgs(shift_ul)
 
@@ -142,15 +169,13 @@ class WindowClip():
             (height, width) = orimg_info.h, orimg_info.w
             height_extend = height + cfg.HEIGHT - cfg.OVERLAP
             width_extend = width + cfg.WIDTH - cfg.OVERLAP
-            mask_merge = np.zeros((height_extend, width_extend))
+            mask_merge = np.zeros((band, height_extend, width_extend))
 
             for img_info in tif2img_list[name]:
                 mask_merge = self.recover_clip_box(pred_dir, mask_merge, img_info, cfg)
                 # mask_merge = recover_clip_box_(pred_dir, mask_merge, img_info, cfg)   # union
-            mask_merge = mask_merge[:height, :width]
-            mask_merge = mask_merge[np.newaxis,:,:]
+            mask_merge = mask_merge[:, :height, :width]
 
             ul_lonlat = (orimg_info.tf[0], orimg_info.tf[3])
             save_tif(os.path.join(orimg_dir, name), mask_merge, os.path.join(predmerge_dir, name), ul_lonlat)
-            # .png
-            # cv2.imwrite(os.path.join(seg_merge_dir, "{}.png".format(tif.split('.')[0])), mask_merge)
+            # cv2.imwrite(os.path.join(seg_merge_dir, "{}.png".format(tif.split('.')[0])), mask_merge)   # .png

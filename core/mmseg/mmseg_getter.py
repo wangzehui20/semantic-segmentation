@@ -114,5 +114,11 @@ config_get = {
     },
     "upernet_swin-s": {
         "config_path": "/data/code/semantic-segmentation-semi-supervised-learning/core/mmseg/config/upernet_swin-s_c96.py"
+    },
+    "pspnet_r50-d8": {
+        "config_path": "/data/code/semantic-segmentation-semi-supervised-learning/core/mmseg/config/pspnet_r50-d8.py"
+    },
+    "unet_s5-d16": {
+        "config_path": "/data/code/semantic-segmentation-semi-supervised-learning/core/mmseg/config/unet_s5-d16.py"
     }
 }

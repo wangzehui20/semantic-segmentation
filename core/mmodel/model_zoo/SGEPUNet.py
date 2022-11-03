@@ -1,5 +1,6 @@
 import torch
 import torch.nn.functional as F
+import numpy as np
 from core.mmodel.model_zoo.backbones.resnet import BasicBlock
 from torch import nn
 from segmentation_models_pytorch.encoders import get_encoder
@@ -346,11 +347,11 @@ class SGEPUnet(nn.Module):
         return [[pre1, pre2, chg]]
 
 # if __name__ == "__main__":
-#     img = np.random.rand(1, 3, 256, 256)
-#     label = np.zeros((1, 1, 256, 256))
-#     x = torch.tensor(img, dtype=torch.float32)
-#     y = torch.tensor(label, dtype=torch.float32)
-#     b = EPUnet()
-#     result = b(x, y)
-#     print('done')
-#     # a=SGEPUnet(1,None).forward(x,x,1)
+    # img = np.random.rand(1, 3, 256, 256)
+    # label = np.zeros((1, 1, 256, 256))
+    # x = torch.tensor(img, dtype=torch.float32)
+    # y = torch.tensor(label, dtype=torch.float32)
+    # b = EPUnet()
+    # result = b(x, y)
+    # print('done')
+    # a=SGEPUnet(1,None).forward(x,x,1)
