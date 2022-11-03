@@ -1,2 +1,2 @@
-# Semantic Segmentation Semi-supervised Learning
-we generate pseudo label from unlabeled data to train 
+# Semantic Segmentation
+support semantic segmantaion, and also semi-supervised learning
