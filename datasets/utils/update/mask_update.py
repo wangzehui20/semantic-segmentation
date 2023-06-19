@@ -244,12 +244,14 @@ if __name__ == '__main__':
 
 
     # different threds
-    pred_dir = rf'/data/data/update/models/{name}/unet/effb1_dicebce/pred'
-    mask_ref_dir = r'/data/data/update/256_128/train_modify/mask'
-    # mask_ref_dir = r'/data/data/update/merge/256_128/train/mask'
-    threds = [0, 0.2, 0.4, 0.6, 0.8, 1]
+    pred_dir = rf'/data/data/update/models/{name}/unet/effb3_dicebce/pred'
+    # mask_ref_dir = r'/data/data/update/256_128/train_modify/mask'
+    mask_ref_dir = r'/data/data/update/256_128/train/mask'
+    # mask_ref_dir = r'/data/data/change_detection/merge/256_128/2012/mask'
+    threds = [0]
     for thred in threds:
-        mask_update_dir = rf'/data/data/update/models/{name}/unet/effb1_dicebce/mask_update_modify/mask_update_{thred}'
+        # mask_update_dir = rf'/data/data/change_detection/models/{name}/unet/effb3_dicebce_scse_edge/mask_update_modify/mask_update_{thred}'
+        mask_update_dir = rf'/data/data/update/models/{name}/unet/effb3_dicebce/mask_update/mask_update_{thred}'
         check_dir(mask_update_dir)
         update_dir(pred_dir, mask_ref_dir, mask_update_dir, iou_thred=thred)
 
@@ -259,5 +261,4 @@ if __name__ == '__main__':
 
 
         
-
 

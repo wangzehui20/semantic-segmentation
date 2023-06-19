@@ -47,14 +47,25 @@ def calimg_score(labelmerge_dir, predmerge_dir, label_map, eva_csvpath):
     c = Csv()
     for name in tqdm(labelist, total=len(labelist)):
         # labelpath = osp.join(labelmerge_dir, name.replace('2012_merge', '2016_merge'))
-        labelpath = osp.join(labelmerge_dir, name.replace('2018', '2019'))
+        # labelpath = osp.join(labelmerge_dir, name.replace('2016_merge', '2012_merge'))   # tmp, train data split
+        # labelpath = osp.join(labelmerge_dir, name.replace('2018_', '2019_'))
+        # labelpath = osp.join(labelmerge_dir, name.replace('2019', '2018'))   # tmp, train data split, update dataset
+        labelpath = osp.join(labelmerge_dir, name)   # tmp, train data split, update dataset
         predpath = osp.join(predmerge_dir, name)
         # label = read_image2(labelpath)
         # pred = read_image2(predpath)
         label = cv2.imread(labelpath, 0)
         pred = cv2.imread(predpath, 0)
         label[label==255] = 0   # nodata value, update dataset origin mask
-
+        pred[label==255] = 0   # nodata value, update dataset origin mask
+        # label = label[:, 25856:]   # tmp, train data split
+        # pred = pred[:, 25856:]   # tmp, train data split
+        # label[:5632, :256] = 0   # tmp, train data split
+        # label = label[12800:, :]   # tmp, train data split, update dataset
+        # pred = pred[12800:, :]   # tmp, train data split
+        # label[:256, :10624] = 0   # tmp, train data split
+        # label = label[:8814, :]   # tmp, train data ft
+        # pred = pred[:8814, :]   # tmp, train data ft
         h, w = label.shape
         pred = pred[:h, :w]
 
@@ -64,13 +75,15 @@ def calimg_score(labelmerge_dir, predmerge_dir, label_map, eva_csvpath):
         label[label>len(label_map)] = 0
         pred[pred>len(label_map)] = 0
         hist += e.fast_hist(pred, label, classes)
-    # f1, f0_5, precision, recall = e.macroscore(hist)
+    f1, f0_5, precision, recall = e.macroscore(hist)
     # print(f1, f0_5, precision, recall)
+    # hist = np.array([[2.1549734e8, 2.37636e6], [8.82478e5, 3.64128e7]])
     iou = e.iou(hist)
     precision = e.precision(hist)
     recall = e.recall(hist)
     oa = e.oa(hist)
     f1 = e.f1(hist)
+    # print(hist)
     print(' iou:', iou, ' precision:', precision, ' recall:', recall, ' oa:', oa, ' f1:', f1)
 
     # data = dict()
@@ -225,19 +238,33 @@ if __name__ == '__main__':
 
     label_dir = r'/data/dataset/update/test/mask'
     # label_dir = rf"/data/dataset/change_detection/origin_merge/2016/label"
+    # label_dir = rf"/data/dataset/change_detection/origin_merge/2012/label"   # tmp, train data split
+    # label_dir = rf"/data/dataset/update/train/mask"   # tmp, train data split, update dataset
+
+    # only one
+    pred_dir = rf'/data/data/update/models/correct/unet/reinhard/pred_ep47_bigmap'
+    calimg_score(label_dir, pred_dir, label_map, eva_csvpath)
+
+
+    # pred_dir = r'/data/dataset/update/train/mask_modify'
+    # pred_dir = r'/data/dataset/change_detection/origin_merge/2012/label'
+    # calimg_score(label_dir, pred_dir, label_map, eva_csvpath)
+
 
     # metd_names = ['ocrnet', 'pspnet', 'segformer', 'swintransformer', 'deeplabv3', 'unet']
     # backb_names = ['hr18_dicebce', 'effb1_dicebce', 'b2_dicebce', 'upernet_swin-s_dicebce', 'effb1_dicebce', 'resnet50_dicebce']
     metd_names = ['unet']
-    backb_names = ['effb1_dicebce']
+    backb_names = ['effb3_dicebce_scse_size160']
     threds = [0, 0.2, 0.4, 0.6, 0.8, 1]
-    # threds = [0.9, 0.95, 0.99]
 
-    for name in names:
-        for i, metd in enumerate(metd_names):
-            for thred in threds:
-                pred_dir = rf'/data/data/update/models/{name}/{metd}/{backb_names[i]}/mask_update_modify/mask_update_{thred}_bigmap'
-                calimg_score(label_dir, pred_dir, label_map, eva_csvpath)
+    # for name in names:
+    #     for i, metd in enumerate(metd_names):
+    #         for thred in threds:
+    #             pred_dir = rf'/data/data/update/models/{name}/{metd}/{backb_names[i]}/mask_update_modify/mask_update_{thred}_bigmap'
+    #             calimg_score(label_dir, pred_dir, label_map, eva_csvpath)
+
+            # pred_dir = rf'/data/data/update/models/{name}/{metd}/{backb_names[i]}/pred_bigmap'
+            # calimg_score(label_dir, pred_dir, label_map, eva_csvpath)
 
 
     # evaluate different threds

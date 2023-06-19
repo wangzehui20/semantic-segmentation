@@ -44,6 +44,8 @@ def get_optimizer(name, model_params, init_params):
         return torch.optim.SGD(model_params, **init_params)
     elif name == 'adamw':
         return torch.optim.AdamW(model_params, **init_params)
+    elif name == 'adam':
+        return torch.optim.Adam(model_params, **init_params)
     optim_class = optimizers.__dict__[name]
     return optim_class(model_params, **init_params)
 

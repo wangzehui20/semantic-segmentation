@@ -97,7 +97,10 @@ def predict(cfg, model, dataloader):
             imgs = batch['image'].to(cfg.device)
             names = batch['id']
             pred = model(imgs)
+            # pred = model(imgs)[0]
             gt = batch['mask'].cuda()
+            # pred = model(imgs)[1]
+            # gt = batch['edge'].cuda()
 
             value = metric_func(pred, gt)
             values.append(value)
@@ -184,6 +187,7 @@ def main(cfg):
 
     print('Creating datasets and loaders..')
     # test_dataset = SegMaskDataset(**cfg.data.test_dataset.init_params)
+    # test_dataset = SegEdgeDataset(**cfg.data.test_dataset.init_params)
     test_dataset = SegDataset(**cfg.data.test_dataset.init_params)
 
     test_sampler = None

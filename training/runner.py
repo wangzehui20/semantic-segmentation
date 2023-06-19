@@ -22,7 +22,6 @@ from collections import defaultdict
 import numpy as np
 from .callbacks import CallbackList
 from torch.cuda.amp import autocast as autocast
-from .pseudo_dataset import PseudoDataset
 from .losses import WeightCEDiceLoss
 
 
@@ -334,7 +333,6 @@ class Runner:
         # compute loss for each output
         for output_name, criterion in self.loss.items():
             # criterion = self._reset_loss(class_weights)
-
             loss_name = 'loss_{}'.format(output_name)
             # compute auxiliary_head loss
             if 'aux' in output_name:
@@ -344,6 +342,13 @@ class Runner:
                 losses_dict[loss_name] = criterion(output[output_name], target[output_name])
 
         # compute total loss across all outputs
+        # sum_loss = 0
+        # for k, v in losses_dict.items():
+        #     if self.cur_epoch < 30 and 'edge' in k:
+        #         sum_loss += 0.00001 * v
+        #     else:
+        #         sum_loss += v
+        # losses_dict['loss'] = sum_loss
         losses_dict['loss'] = sum(loss for loss in losses_dict.values())
 
         return losses_dict
@@ -424,6 +429,7 @@ class Runner:
         # start training loop
         startt = time.time()
         for eidx, epoch in enumerate(range(initial_epoch, epochs)):
+            self.cur_epoch = epoch
             # semi-supervised learning
             # if epoch >= 200:
             #     self.pseudo(self.unlabeled_dataloader, epoch=epoch)

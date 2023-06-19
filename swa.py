@@ -11,49 +11,51 @@ from torchvision import transforms as pytorchtrans
 from torch.utils.data import Dataset
 import pandas as pd
 from typing import Optional
-from datasets import transforms
-from datasets import read_image
+# from datasets import transforms
+# from datasets import read_image
+from datasets.dataset.SegDataset import SegDataset, SegEdgeDataset
+import random
 
 os.environ["CUDA_VISIBLE_DEVICES"] = '0'
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
-class MultiSeg(Dataset):
+# class MultiSeg(Dataset):
 
-    def __init__(
-        self,
-        images_dir: str,
-        ids: Optional[list] = None,
-        transform_name: Optional[str] = None,
-    ):
-        super().__init__()
+#     def __init__(
+#         self,
+#         images_dir: str,
+#         ids: Optional[list] = None,
+#         transform_name: Optional[str] = None,
+#     ):
+#         super().__init__()
 
-        self.names = ids if ids is not None else os.listdir(images_dir)
-        self.images_dir = images_dir
-        self.transform = transforms.__dict__[transform_name] if transform_name else None
-        self.tfms = pytorchtrans.Compose([pytorchtrans.ToTensor()])
-        ignore_label = -1
+#         self.names = ids if ids is not None else os.listdir(images_dir)
+#         self.images_dir = images_dir
+#         self.transform = transforms.__dict__[transform_name] if transform_name else None
+#         self.tfms = pytorchtrans.Compose([pytorchtrans.ToTensor()])
+#         ignore_label = -1
 
-    def __len__(self):
-        return len(self.names)
+#     def __len__(self):
+#         return len(self.names)
 
-    def __getitem__(self, i):
-        name = self.names[i]
-        nameid = name   # .tif
-        maskname = name[:-4] + '.png'
+#     def __getitem__(self, i):
+#         name = self.names[i]
+#         nameid = name   # .tif
+#         maskname = name[:-4] + '.png'
 
-        # read data sample
-        sample = dict(
-            id=maskname,
-            image=read_image(osp.join(self.images_dir, nameid)),
-            )          
-        # apply augmentations
-        if self.transform is not None:
-            sample = self.transform(**sample)
-        sample['image'] = self.tfms(np.ascontiguousarray(sample['image']).astype('float32')).float()
-        sample['image'] -= torch.tensor([128.0, 128.0, 128.0]).reshape(3,1,1)
-        sample['image'] /= torch.tensor([128.0, 128.0, 128.0]).reshape(3,1,1)
-        return sample['image']
+#         # read data sample
+#         sample = dict(
+#             id=maskname,
+#             image=read_image(osp.join(self.images_dir, nameid)),
+#             )          
+#         # apply augmentations
+#         if self.transform is not None:
+#             sample = self.transform(**sample)
+#         sample['image'] = self.tfms(np.ascontiguousarray(sample['image']).astype('float32')).float()
+#         sample['image'] -= torch.tensor([128.0, 128.0, 128.0]).reshape(3,1,1)
+#         sample['image'] /= torch.tensor([128.0, 128.0, 128.0]).reshape(3,1,1)
+#         return sample['image']
 
 
 def model_from_config(path: str, checkpoint_path: str):
@@ -162,32 +164,40 @@ def getcosindex(range_select):
         out.append(kep_path(pthname))
     return out
 
+def worker_init_fn(seed):
+    seed = (seed + 1)
+    np.random.seed(seed)
+    random.seed(seed)
+    random.Random().seed(seed)
+
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+
 
 if __name__ == "__main__":
 
-    cfg = addict.Dict(parse_config(config=r'config/unet_effb3_ce.yaml'))
-    tvids = pd.read_csv(cfg.data.tv_path, dtype={'id': int})
-    train_ids = tvids[tvids['id']==cfg.data.id]['name'].tolist()
+    cfg = addict.Dict(parse_config(config=r'/data/code/semantic-segmentation-semi-supervised-learning/config/change_detection/train/split/effb3_dicebce_scse_edge.yaml'))
 
-    dataset = MultiSeg(cfg.data.train_dataset.init_params.images_dir, train_ids, cfg.data.train_dataset.init_params.transform_name)
+    dataset = SegEdgeDataset(**cfg.data.train_dataset.init_params)
     dataloader = torch.utils.data.DataLoader(
         dataset,
-        batch_size=6,
+        batch_size=64,
         shuffle=True,
         num_workers=0,
         pin_memory=True
     )
 
-    configpath = r'/data/data/multiclass/models/Unet_bifpn/effb3_ce_cosine/config.yaml'
+    configpath = r'/data/code/semantic-segmentation-semi-supervised-learning/config/change_detection/train/split/effb3_dicebce_scse_edge.yaml'
     select_index = [
-        '/data/data/multiclass/models/Unet_bifpn/effb3_ce_cosine/checkpoints/k-ep[7]-0.8389.pth',
-        '/data/data/multiclass/models/Unet_bifpn/effb3_ce_cosine/checkpoints/k-ep[15]-0.8403.pth',
-        '/data/data/multiclass/models/Unet_bifpn/effb3_ce_cosine/checkpoints/k-ep[23]-0.8385.pth',
-        '/data/data/multiclass/models/Unet_bifpn/effb3_ce_cosine/checkpoints/k-ep[31]-0.8416.pth']
+        '/data/data/change_detection/models/train/split/unet/effb3_dicebce_scse_edge_size160/checkpoints/k-ep[24]-0.9296.pth',
+        '/data/data/change_detection/models/train/split/unet/effb3_dicebce_scse_edge_size160/checkpoints/k-ep[45]-0.9295.pth',
+        '/data/data/change_detection/models/train/split/unet/effb3_dicebce_scse_edge_size160/checkpoints/k-ep[54]-0.9288.pth',
+        '/data/data/change_detection/models/train/split/unet/effb3_dicebce_scse_edge_size160/checkpoints/k-ep[41]-0.9285.pth']
     name_list = getcosindex(select_index)
     print(name_list)
 
-    modelpath = r"/data/data/multiclass/models/Unet_bifpn/effb3_ce_cosine/swa/checkpoints"   # save model
+    modelpath = r"/data/data/change_detection/models/train/split/unet/effb3_dicebce_scse_edge_size160/swa/checkpoints"   # save model
     swa_model = model_from_config(configpath, "")
     swa_model = swa_model.to(device)
 

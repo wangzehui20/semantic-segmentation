@@ -731,14 +731,57 @@ class CEDiceFocalLoss(base.Loss):
         return 3 * self.dice_loss(inputs, targets) + self.ce_loss(inputs, targets) + self.focal_loss(inputs, targets)
 
 
-class DICE_BCE(base.Loss):
+class DiceBceLoss(base.Loss):
     def __init__(self, ignore_label=-1):
-        super(DICE_BCE, self).__init__()
+        super(DiceBceLoss, self).__init__()
         self.ignore_index = ignore_label
         self.dice = smp_loss.DiceLoss(mode='binary', ignore_index=ignore_label)
         self.bce = smp_loss.SoftBCEWithLogitsLoss(ignore_index=ignore_label)
 
     def forward(self, inputs, targets):
+        return self.dice(inputs, targets) + self.bce(inputs, targets)
+
+class EdgeDiceBceLoss(base.Loss):
+    def __init__(self, ignore_label=-1):
+        super(EdgeDiceBceLoss, self).__init__()
+        self.ignore_index = ignore_label
+        self.dice = smp_loss.DiceLoss(mode='binary', ignore_index=ignore_label)
+        self.bce = smp_loss.SoftBCEWithLogitsLoss(ignore_index=ignore_label)
+
+    def forward(self, inputs, targets):
+        return self.dice(inputs, targets)*0.5 + self.bce(inputs, targets)*0.5
+
+class DiceBceFocalLoss(base.Loss):
+    def __init__(self, ignore_label=-1):
+        super(DiceBceFocalLoss, self).__init__()
+        self.ignore_index = ignore_label
+        self.dice = smp_loss.DiceLoss(mode='binary', ignore_index=ignore_label)
+        self.bce = smp_loss.SoftBCEWithLogitsLoss(ignore_index=ignore_label)
+        self.focal = BinaryFocalLoss()
+
+    def forward(self, inputs, targets):
+        return 0.1 * self.focal(inputs, targets) + self.dice(inputs, targets) + self.bce(inputs, targets)
+
+class DICE_WeightBCE(base.Loss):
+    def __init__(self, ignore_label=-1):
+        super(DICE_WeightBCE, self).__init__()
+        self.ignore_index = ignore_label
+        self.dice = smp_loss.DiceLoss(mode='binary', ignore_index=ignore_label)
+
+    def calculate_weight_online(self, targets, c=1.02):
+        n_total = targets.shape[0] * targets.shape[-1] * targets.shape[-2]
+        n_label = targets.sum()
+        n_background = n_total - n_label
+        w_label = 1.0 / torch.log(c+(n_label / n_total))
+        w_background = 1.0 / torch.log(c+(n_background / n_total))
+        weights = targets.clone()
+        weights[weights==0] = w_background
+        weights[weights==1] = w_label
+        return weights
+
+    def forward(self, inputs, targets):
+        weight = self.calculate_weight_online(targets)
+        self.bce = smp_loss.SoftBCEWithLogitsLoss(ignore_index=self.ignore_index, weight=weight)
         return self.dice(inputs, targets)*0.5 + self.bce(inputs, targets)*0.5
 
 class DICE_3BCE(base.Loss):

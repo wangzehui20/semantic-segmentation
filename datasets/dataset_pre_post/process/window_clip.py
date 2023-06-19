@@ -65,8 +65,9 @@ class WindowClip():
     # half overlap merge
     def recover_clip_box(self, pred_dir, mask_merge, img_info, cfg):
         n_band = len(mask_merge)
-        # img_path = os.path.join(pred_dir, img_info[0][:-4]+'.png')
-        img_path = os.path.join(pred_dir, img_info[0][:-4]+'.png').replace('2018', '2019') # tmp
+        img_path = os.path.join(pred_dir, img_info[0][:-4]+'.png')   # normal
+        # img_path = os.path.join(pred_dir, img_info[0][:-4]+'.png').replace('2016_', '2012_')   # tmp, train data split
+        # img_path = os.path.join(pred_dir, img_info[0][:-4]+'.png').replace('2019_', '2018_')   # tmp, train data split, update dataset
         if n_band > 1:
             img = cv2.imread(img_path).transpose(2,0,1)
         else:

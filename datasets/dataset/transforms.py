@@ -35,21 +35,28 @@ train_transform_2 = A.Compose([
     A.Flip(p=0.75),
 ])
 
+train_transform_3 = A.Compose([
+    # A.RandomScale(scale_limit=0.3, p=0.5),
+    A.RandomRotate90(p=0.5),
+    A.RandomCrop(128, 128, p=1.),
+    A.Flip(p=0.75),
+])
+
 # train_transform_2 = A.Compose([
 #     # A.RandomScale(scale_limit=0.3, p=0.5),
 #     A.RandomCrop(1024, 1024, p=1.),
 #     A.Flip(p=0.75),
 # ])
 
-train_transform_3 = A.Compose([
-    A.Resize(height=224, width=224, p=1),
-    A.RandomCrop(224, 224, p=1.),
-    A.Flip(p=0.75),
-])
+# train_transform_3 = A.Compose([
+#     A.Resize(height=224, width=224, p=1),
+#     A.RandomCrop(224, 224, p=1.),
+#     A.Flip(p=0.75),
+# ])
 
 train_transform_4 = A.Compose([
     # A.RandomScale(scale_limit=0.3, p=0.5),
-    A.RandomCrop(512, 512, p=1.),
+    A.RandomCrop(160, 160, p=1.),
     A.Flip(p=0.75),
 ])
 

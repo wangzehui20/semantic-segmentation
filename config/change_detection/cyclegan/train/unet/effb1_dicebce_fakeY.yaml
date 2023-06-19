@@ -74,7 +74,7 @@ data:
     num_workers: 0
 
   test_dataloader:
-    batch_size: 128
+    batch_size: 96
     shuffle: false
     drop_last: false
     pin_memory: false

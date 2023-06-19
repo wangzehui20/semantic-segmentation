@@ -27,9 +27,10 @@ def copy_gan(oridir1, oridir2, dstdir1, dstdir2):
 def copy_fake(oridir, dstdir):
     names = os.listdir(oridir)
     for name in names:
-        if '_fake_A' in name:
+        if '_fake_B' in name and 'heatmap' not in name:
             oripath = os.path.join(oridir, name)
-            name = name.split('_fake_A')[0].replace('2012_merge', '2016_merge') + '.png'
+            # name = name.split('_fake_B')[0].replace('2012_merge', '2016_merge') + '.png'
+            name = name.split('_fake_B')[0] + '.png'
             dstpath = os.path.join(dstdir, name)
             shutil.copyfile(oripath, dstpath)
 
@@ -40,19 +41,19 @@ def copy_specific(im_dir, im_dst_dir):
     """
     copy specific images to display
     """
-    # file_names = ['mask']
+    file_names = ['mask']
     # file_names = ['cyclegan', 'hm', 'reinhard', 'train', 'unit', 'drit']
-    file_names = ['deeplabv3/effb1_dicebce', 'ocrnet/hr18_dicebce', 'pspnet/effb1_dicebce', 'segformer/b2_dicebce', 'swintransformer/upernet_swin-s_dicebce', 'unet/effb1_dicebce', 'unet/resnet50_dicebce']
+    # file_names = ['deeplabv3/resnet50_dicebce', 'ocrnet/ocrnet_dicebce', 'pspnet/resnet50_dicebce', 'segformer/b2_dicebce', 'swintransformer/upernet_swin-s_dicebce', 'unet/effb3_dicebce_scse_edge_size160']
     # file_names = ['drit_concat']
     # file_names = ['cyclegan']
-    # im_names = ['2019_1744.png', '2019_1638.png', '2019_4431.png', '2019_2752.png', '2019_4563.png', '2019_4956.png'] # update
-    im_names = ['2016_merge_134.png', '2016_merge_153.png', '2016_merge_255.png', '2016_merge_743.png', '2016_merge_765.png', '2016_merge_4554.png'] # change_detection
+    # im_names = ['2018_11325.png', '2018_11328.png', '2018_11344.png', '2018_11946.png', '2018_12445.png', '2018_14070.png', '2018_14625.png'] # update
+    im_names = ['2012_merge_24179.png', '2012_merge_24260.png', '2012_merge_25709.png', '2012_merge_26537.png', '2012_merge_27914.png', '2012_merge_28589.png', '2012_merge_28646.png', '2012_merge_28654.png'] # change_detection
     for fname in file_names:
         im_dst_base_dir = osp.join(im_dst_dir, fname)
         check_dir(im_dst_base_dir)
         for iname in im_names:
-            # im_path = osp.join(im_dir, fname, iname)
-            im_path = osp.join(im_dir, fname, 'pred', iname)
+            im_path = osp.join(im_dir, fname, iname)
+            # im_path = osp.join(im_dir, fname, 'pred', iname)
             im_dst_path = osp.join(im_dst_base_dir, iname)
             shutil.copyfile(im_path, im_dst_path)
 
@@ -69,17 +70,17 @@ if __name__ == '__main__':
 
 
     # fake image
-    real_fake_dir = r'/data/code/pytorch-CycleGAN-and-pix2pix/results_dir/change_detection/maps_cyclegan/test_latest/images'
-    train_fake_dir = r'/data/data/change_detection/merge/256_128/2016/image_cyclegan'
-    check_dir(train_fake_dir)
-    copy_fake(real_fake_dir, train_fake_dir)
+    # real_fake_dir = r'/data/data/cyclegan/results_dir/update/update_cyclegan_cam/test_latest/images'
+    # train_fake_dir = r'/data/data/update/256_128/train/image_cyclegan_cam'
+    # check_dir(train_fake_dir)
+    # copy_fake(real_fake_dir, train_fake_dir)
 
 
     # copy specific images
     # im_dir = r'/data/data/update/models/cyclegan'
     # im_dst_dir = r'/data/data/update/256_128/test/diff_model_segmentation_0918'
-    # im_dir = r'/data/data/change_detection/models/cyclegan'
-    # im_dst_dir = r'/data/data/change_detection/merge/256_128/2016/diff_model_segmentation_0918'
-    # copy_specific(im_dir, im_dst_dir)
+    im_dir = r'/data/data/change_detection/merge/256_128/2012/split4_1/test'
+    im_dst_dir = r'/data/data/change_detection/merge/256_128/2012/display_split'
+    copy_specific(im_dir, im_dst_dir)
     
 

@@ -1,4 +1,4 @@
-logdir: /data/data/change_detection/models/cyclegan/unet/effb1_dicebce_edge/
+logdir: /data/data/change_detection/models/train/split/pspnet/resnet50_dicebce/
 gpus: [0,1]
 distributed: true
 fp16: false
@@ -6,12 +6,11 @@ lrank: 0
 
 # define model
 model:
-  architecture: UnetEdge
+  architecture: PSPNet
   model_scale: 1
   preweightpath: /data/data
   init_params:
-    encoder_name: efficientnet-b1
-    encoder_weights: imagenet
+    encoder_name: resnet50
     in_channels: 3
     classes: 1
 
@@ -20,29 +19,26 @@ tta: False
 data:
   # datasets
   train_dataset:
-    name: SegEdgeDataset
+    name: SegDataset
     init_params:
-      images_dir: /data/data/change_detection/merge/256_128/2012/image_cyclegan
-      masks_dir: /data/data/change_detection/merge/256_128/2012/mask
-      edges_dir: /data/data/change_detection/merge/256_128/2012/edge
+      images_dir: /data/data/change_detection/merge/256_128/2012/split4_1/train/image
+      masks_dir: /data/data/change_detection/merge/256_128/2012/split4_1/train/mask
       # ids_csv: /data/data/update/256_128/train/train.csv
       transform_name: train_transform_2
 
   valid_dataset:
-    name: SegEdgeDataset
+    name: SegDataset
     init_params:
-      images_dir: /data/data/change_detection/merge/256_128/2016/image
-      masks_dir: /data/data/change_detection/merge/256_128/2016/mask
-      edges_dir: /data/data/change_detection/merge/256_128/2016/edge
+      images_dir: /data/data/change_detection/merge/256_128/2012/split4_1/test/image
+      masks_dir: /data/data/change_detection/merge/256_128/2012/split4_1/test/mask
       # ids_csv: /data/data/update/256_128/test/test.csv
       transform_name: test_transform_1
 
   test_dataset:
-    name: SegEdgeDataset
+    name: SegDataset
     init_params:
-      images_dir: /data/data/change_detection/merge/256_128/2016/image
-      masks_dir: /data/data/change_detection/merge/256_128/2016/mask
-      edges_dir: /data/data/change_detection/merge/256_128/2016/edge
+      images_dir: /data/data/change_detection/merge/256_128/2012/split4_1/test/image
+      masks_dir: /data/data/change_detection/merge/256_128/2012/split4_1/test/mask
       transform_name: test_transform_1
 
   unlabeled_dataset:
@@ -77,7 +73,7 @@ data:
     num_workers: 0
 
   test_dataloader:
-    batch_size: 40
+    batch_size: 64
     shuffle: false
     drop_last: false
     pin_memory: false
@@ -100,18 +96,11 @@ training:
 
   losses:
     mask:
-      name: DICE_BCE
-      init_params:
-    edge:
-      name: BCEWithLogitsLoss
+      name: DiceBceLoss
       init_params:
 
   metrics:
     mask:
-      - name: IoU
-        init_params:
-          activation: sigmoid
-    edge:
       - name: IoU
         init_params:
           activation: sigmoid
@@ -125,10 +114,6 @@ training:
     name: WarmupPolyLR
     init_params:
       epochs: 100
-
-  runner:
-    model_input_keys: 'image'
-    model_output_keys: ['mask', 'edge']
 
   fit:
     epochs: 60

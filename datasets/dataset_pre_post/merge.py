@@ -65,27 +65,39 @@ if __name__ == '__main__':
 
     # test_orimg_dir = rf"/data/dataset/change_detection/origin_merge/2016/label"
     # test_shiftul_path = rf"/data/data/change_detection/merge/256_128/2016/shiftul.json"
-    test_orimg_dir = rf"/data/dataset/update/train/mask_modify"
-    test_shiftul_path = rf"/data/data/update/256_128/train_modify/shiftul.json"
+    test_orimg_dir = rf"/data/dataset/update/test/mask"
+    test_shiftul_path = rf"/data/data/update/256_128/test/shiftul.json"
+    # test_orimg_dir = rf"/data/dataset/update/train/mask_modify"
+    # test_shiftul_path = rf"/data/data/update/256_128/train_modify/shiftul.json"
 
     shift_ul = open_json(test_shiftul_path)   # '0.jpg': ['tif_name', shift_x, shift_y]
+
+    # only one
+    pred_dir = rf"/data/data/update/models/correct/unet/reinhard/pred_ep47"
+    predmerge_dir = rf"/data/data/update/models/correct/unet/reinhard/pred_ep47_bigmap"
+    check_dir(predmerge_dir)
+    windowc.merge(test_orimg_dir, pred_dir, predmerge_dir, shift_ul, cfg)   # merge pred
+
+
+
 
     # metd_names = ['ocrnet', 'pspnet', 'segformer', 'swintransformer', 'deeplabv3', 'unet']
     # backb_names = ['hr18_dicebce', 'effb1_dicebce', 'b2_dicebce', 'upernet_swin-s_dicebce', 'effb1_dicebce', 'resnet50_dicebce']
     metd_names = ['unet']
-    backb_names = ['effb1_dicebce']
+    backb_names = ['effb3_dicebce_scse_size160']
     threds = [0, 0.2, 0.4, 0.6, 0.8, 1]
-    # threds = [0.9, 0.95, 0.99]
 
-    for name in names:
-        for i, metd in enumerate(metd_names):
-            for thred in threds:
-            # pred_dir = rf"/data/data/update/models/{name}/{metd}/{backb_names[i]}/pred"
-            # predmerge_dir = rf"/data/data/update/models/{name}/{metd}/{backb_names[i]}/pred_bigmap"
-                pred_dir = rf"/data/data/update/models/{name}/{metd}/{backb_names[i]}/mask_update_modify/mask_update_{thred}"
-                predmerge_dir = rf"/data/data/update/models/{name}/{metd}/{backb_names[i]}/mask_update_modify/mask_update_{thred}_bigmap"
-                check_dir(predmerge_dir)
-                windowc.merge(test_orimg_dir, pred_dir, predmerge_dir, shift_ul, cfg)   # merge pred
+    # for name in names:
+    #     for i, metd in enumerate(metd_names):
+    #         for thred in threds:
+    #         # pred_dir = rf"/data/data/update/models/{name}/{metd}/{backb_names[i]}/pred"
+    #         # predmerge_dir = rf"/data/data/update/models/{name}/{metd}/{backb_names[i]}/pred_bigmap"
+    #         # check_dir(predmerge_dir)
+    #         # windowc.merge(test_orimg_dir, pred_dir, predmerge_dir, shift_ul, cfg)   # merge pred
+    #             pred_dir = rf"/data/data/update/models/{name}/{metd}/{backb_names[i]}/mask_update_modify/mask_update_{thred}"
+    #             predmerge_dir = rf"/data/data/update/models/{name}/{metd}/{backb_names[i]}/mask_update_modify/mask_update_{thred}_bigmap"
+    #             check_dir(predmerge_dir)
+    #             windowc.merge(test_orimg_dir, pred_dir, predmerge_dir, shift_ul, cfg)   # merge pred
 
 
     # merge different threds

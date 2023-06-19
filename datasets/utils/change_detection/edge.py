@@ -77,7 +77,7 @@ def get_edge_img(oridir, dstdir):
         dst_path = osp.join(dstdir, name)
         img = convert_label(cv2.imread(img_path, 0))
         img_dis = ndimage.morphology.distance_transform_edt(img)
-        img_dis[img_dis > 2] = 0
+        img_dis[img_dis > 4] = 0
         img_dis[img_dis > 0] = 255
         img = img_dis.astype(np.uint8)
         # img = img[np.newaxis,:,:]
@@ -86,7 +86,7 @@ def get_edge_img(oridir, dstdir):
 
 
 if __name__ == '__main__':
-    oridir = r'/data/data/change_detection/merge/256_128/2016/mask'
-    dstdir = r'/data/data/change_detection/merge/256_128/2016/edge'
+    oridir = r'/data/data/change_detection/merge/256_128/2012/mask'
+    dstdir = r'/data/data/change_detection/merge/256_128/2012/edge_dis4'
     is_dir(dstdir)
     get_edge_img(oridir, dstdir)
